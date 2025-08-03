@@ -25,7 +25,11 @@ function App() {
 
   useEffect(() => {
     // Initialize Socket.IO connection
-    const newSocket = io();
+    const newSocket = io('/', {
+  transports: ['websocket', 'polling'],
+  upgrade: true
+});
+
     
     newSocket.on('connect', () => {
       console.log('🔌 Connected to DebugFlow backend');
