@@ -24,11 +24,31 @@ function App() {
   });
 
   useEffect(() => {
-    // Initialize Socket.IO connection
-    const newSocket = io('/', {
-  transports: ['websocket', 'polling'],
-  upgrade: true
-});
+  // For Vercel deployment, simulate socket connection
+  const checkConnection = async () => {
+    try {
+      const response = await fetch('/api/socket');
+      if (response.ok) {
+        setIsConnected(true);
+        console.log('🔌 Connected to DebugFlow backend');
+      }
+    } catch (error) {
+      console.error('Connection failed:', error);
+      setIsConnected(false);
+    }
+  };
+
+  checkConnection();
+  
+  // Check connection every 30 seconds
+  const interval = setInterval(checkConnection, 30000);
+
+  // Load user projects
+  loadProjects();
+
+  return () => clearInterval(interval);
+}, []);
+
 
     
     newSocket.on('connect', () => {
