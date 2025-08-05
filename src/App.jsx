@@ -23,52 +23,6 @@ function App() {
     email: 'john@example.com'
   });
 
-  useEffect(() => {
-  // For Vercel deployment, simulate socket connection
-  const checkConnection = async () => {
-    try {
-      const response = await fetch('/api/socket');
-      if (response.ok) {
-        setIsConnected(true);
-        console.log('🔌 Connected to DebugFlow backend');
-      }
-    } catch (error) {
-      console.error('Connection failed:', error);
-      setIsConnected(false);
-    }
-  };
-
-  checkConnection();
-  
-  // Check connection every 30 seconds
-  const interval = setInterval(checkConnection, 30000);
-
-  // Load user projects
-  loadProjects();
-
-  return () => clearInterval(interval);
-}, []);
-
-
-    
-    newSocket.on('connect', () => {
-      console.log('🔌 Connected to DebugFlow backend');
-      setIsConnected(true);
-    });
-
-    newSocket.on('disconnect', () => {
-      console.log('❌ Disconnected from backend');
-      setIsConnected(false);
-    });
-
-    setSocket(newSocket);
-
-    // Load user projects
-    loadProjects();
-
-    return () => newSocket.close();
-  }, []);
-
   const loadProjects = async () => {
     try {
       const response = await fetch('/api/projects');
@@ -104,6 +58,32 @@ function App() {
     }
   };
 
+  useEffect(() => {
+    // For Vercel deployment, simulate socket connection
+    const checkConnection = async () => {
+      try {
+        const response = await fetch('/api/socket');
+        if (response.ok) {
+          setIsConnected(true);
+          console.log('🔌 Connected to DebugFlow backend');
+        }
+      } catch (error) {
+        console.error('Connection failed:', error);
+        setIsConnected(false);
+      }
+    };
+
+    checkConnection();
+    
+    // Check connection every 30 seconds
+    const interval = setInterval(checkConnection, 30000);
+
+    // Load user projects
+    loadProjects();
+
+    return () => clearInterval(interval);
+  }, []);
+
   const addProject = (project) => {
     setProjects(prev => [project, ...prev]);
   };
@@ -117,33 +97,38 @@ function App() {
   const renderCurrentTab = () => {
     switch (currentTab) {
       case 'dashboard':
-        return <Dashboard projects={projects} user={user} />;
+        return <Dashboard />;
       case 'upload':
-        return <UploadProject onProjectAdded={addProject} />;
+        return <UploadProject />;
       case 'projects':
-        return <MyProjects projects={projects} onProjectUpdate={updateProject} />;
+        return <MyProjects />;
       case 'settings':
-        return <Settings user={user} />;
+        return <Settings />;
       default:
-        return <Dashboard projects={projects} user={user} />;
+        return <Dashboard />;
     }
   };
 
   return (
     <SocketContext.Provider value={{ socket, isConnected }}>
-      <ProjectContext.Provider value={{ projects, addProject, updateProject }}>
+      <ProjectContext.Provider value={{ 
+        projects, 
+        addProject, 
+        updateProject, 
+        loadProjects,
+        user 
+      }}>
         <div className="min-h-screen bg-gray-50">
           <Navbar 
-            currentTab={currentTab} 
-            onTabChange={setCurrentTab}
-            user={user}
+            currentTab={currentTab}
+            setCurrentTab={setCurrentTab}
             isConnected={isConnected}
           />
           
-          <main className="max-w-7xl mx-auto px-4 py-8">
+          <main className="container mx-auto px-4 py-8">
             {renderCurrentTab()}
           </main>
-
+          
           <Toaster position="top-right" />
         </div>
       </ProjectContext.Provider>
