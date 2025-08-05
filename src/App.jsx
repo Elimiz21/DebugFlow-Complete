@@ -9,7 +9,7 @@ import UploadProject from './pages/UploadProject';
 import MyProjects from './pages/MyProjects';
 import Settings from './pages/Settings';
 
-// Context
+// Contexts
 import { SocketContext } from './contexts/SocketContext';
 import { ProjectContext } from './contexts/ProjectContext';
 
@@ -18,117 +18,74 @@ function App() {
   const [isConnected, setIsConnected] = useState(false);
   const [currentTab, setCurrentTab] = useState('dashboard');
   const [projects, setProjects] = useState([]);
-  const [user, setUser] = useState({
+  const [user] = useState({
     name: 'john_dev',
     email: 'john@example.com'
   });
 
+  // Load projects from API
   const loadProjects = async () => {
     try {
-      const response = await fetch('/api/projects');
-      const data = await response.json();
-      setProjects(data.projects || []);
-    } catch (error) {
-      console.error('Failed to load projects:', error);
-      // Set mock data for demo
-      setProjects([
-        {
-          id: "proj_001",
-          name: "E-commerce Website",
-          type: "Web Application",
-          status: "completed",
-          lastModified: "2025-08-01T10:30:00Z",
-          bugsFound: 3,
-          bugsFixed: 3,
-          codebase: "https://github.com/user/ecommerce-app",
-          language: "JavaScript/React"
-        },
-        {
-          id: "proj_002",
-          name: "Mobile API Backend", 
-          type: "API Service",
-          status: "in-progress",
-          lastModified: "2025-08-02T14:15:00Z",
-          bugsFound: 2,
-          bugsFixed: 1,
-          codebase: "https://gitlab.com/user/mobile-api",
-          language: "Python/Django"
-        }
-      ]);
+      const res = await fetch('/api/projects');
+      const { projects: dataProjects } = await res.json();
+      setProjects(dataProjects || []);
+    } catch {
+      setProjects([]);
     }
   };
 
+  // Check API socket connection periodically
   useEffect(() => {
-    // For Vercel deployment, simulate socket connection
     const checkConnection = async () => {
       try {
-        const response = await fetch('/api/socket');
-        if (response.ok) {
+        const res = await fetch('/api/socket');
+        if (res.ok) {
           setIsConnected(true);
-          console.log('🔌 Connected to DebugFlow backend');
+        } else {
+          setIsConnected(false);
         }
-      } catch (error) {
-        console.error('Connection failed:', error);
+      } catch {
         setIsConnected(false);
       }
     };
 
     checkConnection();
-    
-    // Check connection every 30 seconds
     const interval = setInterval(checkConnection, 30000);
-
-    // Load user projects
     loadProjects();
 
     return () => clearInterval(interval);
   }, []);
 
-  const addProject = (project) => {
-    setProjects(prev => [project, ...prev]);
-  };
-
-  const updateProject = (projectId, updates) => {
-    setProjects(prev => prev.map(p => 
-      p.id === projectId ? { ...p, ...updates } : p
-    ));
-  };
+  const addProject = project => setProjects(prev => [project, ...prev]);
+  const updateProject = (id, updates) => setProjects(prev =>
+    prev.map(p => p.id === id ? { ...p, ...updates } : p)
+  );
 
   const renderCurrentTab = () => {
     switch (currentTab) {
-      case 'dashboard':
-        return <Dashboard />;
-      case 'upload':
-        return <UploadProject />;
-      case 'projects':
-        return <MyProjects />;
-      case 'settings':
-        return <Settings />;
-      default:
-        return <Dashboard />;
+      case 'dashboard': return <Dashboard />;
+      case 'upload': return <UploadProject />;
+      case 'projects': return <MyProjects />;
+      case 'settings': return <Settings />;
+      default: return <Dashboard />;
     }
   };
 
   return (
     <SocketContext.Provider value={{ socket, isConnected }}>
-      <ProjectContext.Provider value={{ 
-        projects, 
-        addProject, 
-        updateProject, 
-        loadProjects,
-        user 
+      <ProjectContext.Provider value={{
+        projects, addProject, updateProject, loadProjects, user
       }}>
         <div className="min-h-screen bg-gray-50">
-          <Navbar 
+          <Navbar
             currentTab={currentTab}
             setCurrentTab={setCurrentTab}
             isConnected={isConnected}
+            user={user}
           />
-          
           <main className="container mx-auto px-4 py-8">
             {renderCurrentTab()}
           </main>
-          
           <Toaster position="top-right" />
         </div>
       </ProjectContext.Provider>
