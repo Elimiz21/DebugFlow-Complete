@@ -1,32 +1,31 @@
-export default async function handler(req, res) {
+export default function handler(req, res) {
   if (req.method === 'GET') {
-    const projects = [
+    const sampleProjects = [
       {
-        id: "proj_001",
-        name: "E-commerce Website",
-        type: "Web Application",
-        status: "completed",
-        lastModified: "2025-08-01T10:30:00Z",
-        bugsFound: 3,
-        bugsFixed: 3,
-        codebase: "https://github.com/user/ecommerce-app",
-        language: "JavaScript/React"
+        id: 'proj_1',
+        name: 'E-commerce Website',
+        type: 'Web Application',
+        status: 'completed',
+        bugsFound: 12,
+        bugsFixed: 12,
+        language: 'JavaScript'
       },
       {
-        id: "proj_002",
-        name: "Mobile API Backend",
-        type: "API Service",
-        status: "in-progress",
-        lastModified: "2025-08-02T14:15:00Z",
-        bugsFound: 2,
-        bugsFixed: 1,
-        codebase: "https://gitlab.com/user/mobile-api",
-        language: "Python/Django"
+        id: 'proj_2',
+        name: 'Mobile API Backend',
+        type: 'API Service',
+        status: 'in-progress',
+        bugsFound: 8,
+        bugsFixed: 5,
+        language: 'Python'
       }
     ];
-    
-    res.json({ success: true, projects });
-  } else {
-    res.status(405).json({ error: 'Method not allowed' });
+
+    return res.status(200).json({
+      success: true,
+      projects: sampleProjects,
+      count: sampleProjects.length
+    });
   }
+  res.status(405).json({ error: 'Method not allowed' });
 }
