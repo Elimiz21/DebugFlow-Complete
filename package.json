@@ -2,7 +2,6 @@
   "name": "debugflow-complete",
   "version": "1.0.0",
   "private": true,
-  "homepage": ".",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
