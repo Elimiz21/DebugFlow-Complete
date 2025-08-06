@@ -16,7 +16,14 @@
       "src": "/api/(.*)",
       "dest": "/api/$1.js"
     },
-    { "handle": "filesystem" },
+    {
+      "src": "/assets/(.*)",
+      "dest": "/dist/assets/$1"
+    },
+    {
+      "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|ico|svg))",
+      "dest": "/dist/$1"
+    },
     {
       "src": "/(.*)",
       "dest": "/dist/index.html"
