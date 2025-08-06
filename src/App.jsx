@@ -11,16 +11,17 @@ import Settings from './pages/Settings';
 
 // Contexts
 import { SocketContext } from './contexts/SocketContext';
-import { ProjectProvider } from './contexts/ProjectContext.jsx';
+import { ProjectProvider, useProjectContext } from './contexts/ProjectContext.jsx';
 
-function App() {
-  const [socket, setSocket] = useState(null);
-  const [isConnected, setIsConnected] = useState(false);
+// Inner component that uses project context
+function AppContent() {
   const [currentTab, setCurrentTab] = useState('dashboard');
+  const [isConnected, setIsConnected] = useState(false);
   const [user] = useState({
     name: 'john_dev',
     email: 'john@example.com'
   });
+  const { projects } = useProjectContext();
 
   // Check API socket connection periodically
   useEffect(() => {
@@ -45,29 +46,38 @@ function App() {
 
   const renderCurrentTab = () => {
     switch (currentTab) {
-      case 'dashboard': return <Dashboard />;
+      case 'dashboard': return <Dashboard projects={projects} user={user} />;
       case 'upload': return <UploadProject />;
       case 'projects': return <MyProjects />;
       case 'settings': return <Settings />;
-      default: return <Dashboard />;
+      default: return <Dashboard projects={projects} user={user} />;
     }
   };
 
   return (
+    <div className="min-h-screen bg-gray-50">
+      <Navbar
+        currentTab={currentTab}
+        onTabChange={setCurrentTab}
+        isConnected={isConnected}
+        user={user}
+      />
+      <main className="container mx-auto px-4 py-8">
+        {renderCurrentTab()}
+      </main>
+      <Toaster position="top-right" />
+    </div>
+  );
+}
+
+function App() {
+  const [socket, setSocket] = useState(null);
+  const [isConnected, setIsConnected] = useState(false);
+
+  return (
     <SocketContext.Provider value={{ socket, isConnected }}>
       <ProjectProvider>
-        <div className="min-h-screen bg-gray-50">
-          <Navbar
-            currentTab={currentTab}
-            onTabChange={setCurrentTab}
-            isConnected={isConnected}
-            user={user}
-          />
-          <main className="container mx-auto px-4 py-8">
-            {renderCurrentTab()}
-          </main>
-          <Toaster position="top-right" />
-        </div>
+        <AppContent />
       </ProjectProvider>
     </SocketContext.Provider>
   );
