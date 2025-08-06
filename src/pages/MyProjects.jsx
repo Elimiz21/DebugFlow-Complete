@@ -1,5 +1,5 @@
 import React from 'react';
-import { useProjectContext } from '../contexts/ProjectContext';
+import { useProjectContext } from '../contexts/ProjectContext.jsx';
 import { BookOpen, CheckCircle2 } from 'lucide-react';
 
 export default function MyProjects() {
