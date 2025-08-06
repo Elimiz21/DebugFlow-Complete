@@ -1,31 +1,266 @@
-export default function handler(req, res) {
-  if (req.method === 'GET') {
-    const sampleProjects = [
-      {
-        id: 'proj_1',
-        name: 'E-commerce Website',
-        type: 'Web Application',
-        status: 'completed',
-        bugsFound: 12,
-        bugsFixed: 12,
-        language: 'JavaScript'
-      },
-      {
-        id: 'proj_2',
-        name: 'Mobile API Backend',
-        type: 'API Service',
-        status: 'in-progress',
-        bugsFound: 8,
-        bugsFixed: 5,
-        language: 'Python'
-      }
-    ];
+import { AuthUtils, authenticateToken } from '../utils/auth.js';
+import database from '../database/database.js';
+import Joi from 'joi';
+import { v4 as uuidv4 } from 'uuid';
 
-    return res.status(200).json({
-      success: true,
-      projects: sampleProjects,
-      count: sampleProjects.length
+// Validation schemas
+const createProjectSchema = Joi.object({
+  name: Joi.string().min(2).max(100).required(),
+  description: Joi.string().max(500).optional(),
+  type: Joi.string().valid('web-app', 'api', 'script', 'library').required(),
+  language: Joi.string().max(50).optional(),
+  codebase_url: Joi.string().uri().optional(),
+  deployment_url: Joi.string().uri().optional()
+});
+
+export default async function handler(req, res) {
+  // Initialize database connection
+  if (!database.db) {
+    try {
+      await database.initialize();
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: 'Database initialization failed'
+      });
+    }
+  }
+
+  const { method } = req;
+
+  // All endpoints require authentication
+  const authHeader = req.headers['authorization'];
+  const token = AuthUtils.extractTokenFromHeader(authHeader);
+
+  if (!token) {
+    return res.status(401).json({
+      success: false,
+      message: 'Access denied. No token provided.'
     });
   }
-  res.status(405).json({ error: 'Method not allowed' });
+
+  const user = AuthUtils.verifyToken(token);
+  if (!user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Invalid token.'
+    });
+  }
+
+  req.user = user; // Add user to request
+
+  switch (method) {
+    case 'GET':
+      return handleGetProjects(req, res);
+    case 'POST':
+      return handleCreateProject(req, res);
+    case 'PUT':
+      return handleUpdateProject(req, res);
+    case 'DELETE':
+      return handleDeleteProject(req, res);
+    default:
+      res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
+      return res.status(405).json({
+        success: false,
+        message: `Method ${method} not allowed`
+      });
+  }
+}
+
+async function handleGetProjects(req, res) {
+  try {
+    const { id } = req.query;
+    
+    if (id) {
+      // Get specific project
+      const project = await database.getProjectById(id);
+      
+      if (!project) {
+        return res.status(404).json({
+          success: false,
+          message: 'Project not found'
+        });
+      }
+      
+      // Check if user owns the project
+      if (project.user_id !== req.user.id) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. You do not own this project.'
+        });
+      }
+      
+      return res.status(200).json({
+        success: true,
+        data: { project }
+      });
+    } else {
+      // Get all projects for user
+      const projects = await database.getProjectsByUserId(req.user.id);
+      
+      return res.status(200).json({
+        success: true,
+        projects: projects,
+        count: projects.length,
+        message: projects.length === 0 ? 'No projects found. Upload your first project to get started.' : ''
+      });
+    }
+  } catch (error) {
+    console.error('Get projects error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
+async function handleCreateProject(req, res) {
+  try {
+    // Validate input
+    const { error, value } = createProjectSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({
+        success: false,
+        message: error.details[0].message
+      });
+    }
+
+    // Generate unique project ID
+    const projectId = uuidv4();
+
+    // Create project data
+    const projectData = {
+      id: projectId,
+      user_id: req.user.id,
+      ...value
+    };
+
+    // Save to database
+    await database.createProject(projectData);
+
+    // Fetch the created project
+    const project = await database.getProjectById(projectId);
+
+    res.status(201).json({
+      success: true,
+      message: 'Project created successfully',
+      data: { project }
+    });
+
+  } catch (error) {
+    console.error('Create project error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
+async function handleUpdateProject(req, res) {
+  try {
+    const { id } = req.query;
+    
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Project ID is required'
+      });
+    }
+
+    // Check if project exists and user owns it
+    const existingProject = await database.getProjectById(id);
+    if (!existingProject) {
+      return res.status(404).json({
+        success: false,
+        message: 'Project not found'
+      });
+    }
+
+    if (existingProject.user_id !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You do not own this project.'
+      });
+    }
+
+    // Validate updates (allow partial updates)
+    const allowedFields = ['name', 'description', 'status', 'bugs_found', 'bugs_fixed', 'deployment_url'];
+    const updates = {};
+    
+    for (const field of allowedFields) {
+      if (req.body[field] !== undefined) {
+        updates[field] = req.body[field];
+      }
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'No valid fields to update'
+      });
+    }
+
+    // Update project
+    await database.updateProject(id, updates);
+
+    // Fetch updated project
+    const project = await database.getProjectById(id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Project updated successfully',
+      data: { project }
+    });
+
+  } catch (error) {
+    console.error('Update project error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
+}
+
+async function handleDeleteProject(req, res) {
+  try {
+    const { id } = req.query;
+    
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Project ID is required'
+      });
+    }
+
+    // Check if project exists and user owns it
+    const project = await database.getProjectById(id);
+    if (!project) {
+      return res.status(404).json({
+        success: false,
+        message: 'Project not found'
+      });
+    }
+
+    if (project.user_id !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You do not own this project.'
+      });
+    }
+
+    // Delete project (CASCADE will handle related records)
+    await database.run('DELETE FROM projects WHERE id = ?', [id]);
+
+    res.status(200).json({
+      success: true,
+      message: 'Project deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Delete project error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error'
+    });
+  }
 }

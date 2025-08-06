@@ -15,17 +15,17 @@ const Settings = ({ user }) => {
 
   const [integrations, setIntegrations] = useState({
     aiPlatforms: [
-      { name: 'OpenAI GPT-4', status: 'connected', features: ['Bug Analysis', 'Code Generation', 'Fix Recommendations'] },
+      { name: 'OpenAI GPT-4', status: 'not-connected', features: ['Bug Analysis', 'Code Generation', 'Fix Recommendations'] },
       { name: 'Claude', status: 'not-connected', features: ['Code Review', 'Refactoring', 'Documentation'] },
       { name: 'Google Gemini', status: 'not-connected', features: ['Multi-language Support', 'Code Translation'] }
     ],
     repositories: [
-      { name: 'GitHub', status: 'connected', permissions: 'read-write', username: 'john_dev' },
+      { name: 'GitHub', status: 'not-connected', permissions: 'none', username: '' },
       { name: 'GitLab', status: 'not-connected', permissions: 'none' },
       { name: 'Bitbucket', status: 'not-connected', permissions: 'none' }
     ],
     deployment: [
-      { name: 'Vercel', status: 'connected', projects: 5 },
+      { name: 'Vercel', status: 'not-connected', projects: 0 },
       { name: 'Netlify', status: 'not-connected', projects: 0 },
       { name: 'AWS', status: 'not-connected', projects: 0 }
     ]

@@ -3,13 +3,13 @@ import { BarChart3, Bug, CheckCircle, Clock, TrendingUp } from 'lucide-react';
 
 const Dashboard = ({ projects, user }) => {
   const stats = {
-    totalProjects: projects.length,
-    bugsFixed: projects.reduce((sum, p) => sum + (p.bugsFixed || 0), 0),
-    timesSaved: "18 hours",
-    successRate: "94%"
+    totalProjects: projects?.length || 0,
+    bugsFixed: projects?.reduce((sum, p) => sum + (p.bugsFixed || 0), 0) || 0,
+    timesSaved: "0 hours",
+    successRate: "0%"
   };
 
-  const recentProjects = projects.slice(0, 3);
+  const recentProjects = projects?.slice(0, 3) || [];
 
   const getStatusColor = (status) => {
     switch (status) {
