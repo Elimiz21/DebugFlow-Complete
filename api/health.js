@@ -1,13 +1,10 @@
 export default function handler(req, res) {
-  res.status(200).json({
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    version: '2.1.0',
-    services: {
-      ai: !!process.env.OPENAI_API_KEY,
-      github: !!process.env.GITHUB_TOKEN,
-      testing: true,
-      implementation: true
-    }
-  });
+  if (req.method === 'GET') {
+    return res.status(200).json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime()
+    });
+  }
+  res.status(405).json({ error: 'Method not allowed' });
 }
