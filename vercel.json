@@ -1,17 +1,18 @@
 {
   "version": 2,
-  "framework": "vite",
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "functions": {
-    "api/**/*.js": {
-      "runtime": "nodejs18.x"
-    }
-  },
-  "routes": [
+  "builds": [
     {
-      "src": "/api/(.*)",
-      "dest": "/api/$1.js"
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
     }
-  ]
+  ],
+  "functions": {
+    "api/health.js": { "runtime": "nodejs18.x" },
+    "api/socket.js": { "runtime": "nodejs18.x" },
+    "api/projects.js": { "runtime": "nodejs18.x" },
+    "api/upload.js": { "runtime": "nodejs18.x" }
+  }
 }
