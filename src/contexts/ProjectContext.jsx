@@ -8,10 +8,28 @@ export function ProjectProvider({ children }) {
   // Load projects from API
   const loadProjects = async () => {
     try {
-      const res = await fetch('/api/projects');
-      const { projects: fetched } = await res.json();
-      setProjects(fetched || []);
-    } catch {
+      const token = localStorage.getItem('debugflow_token');
+      if (!token) {
+        setProjects([]);
+        return;
+      }
+
+      const res = await fetch('/api/projects', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      const result = await res.json();
+      
+      if (result.success) {
+        setProjects(result.projects || []);
+      } else {
+        console.error('Failed to load projects:', result.message);
+        setProjects([]);
+      }
+    } catch (error) {
+      console.error('Error loading projects:', error);
       setProjects([]);
     }
   };

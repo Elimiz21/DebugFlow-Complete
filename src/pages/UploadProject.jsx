@@ -45,23 +45,65 @@ const UploadProject = () => {
     setIsProcessing(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const newProject = {
-        id: `proj_${Date.now()}`,
-        name: projectData.name || 'New Project',
-        type: projectType === 'app' ? 'Web Application' : 'Script',
-        status: 'analyzing',
-        lastModified: new Date().toISOString(),
-        bugsFound: 0,
-        bugsFixed: 0,
-        codebase: projectData.codebaseUrl || 'Local Files',
-        language: 'JavaScript'
-      };
+      // Get authentication token
+      const token = localStorage.getItem('debugflow_token');
+      if (!token) {
+        toast.error('Please log in to upload projects');
+        return;
+      }
 
-      addProject(newProject);
-      toast.success('Project uploaded successfully!');
+      // Prepare form data
+      const formData = new FormData();
+      formData.append('projectName', projectData.name || 'New Project');
+      formData.append('projectDescription', projectData.description || '');
+      formData.append('projectType', projectType === 'app' ? 'web-app' : projectType === 'files' ? 'script' : 'library');
+      
+      if (projectData.codebaseUrl) {
+        formData.append('codebaseUrl', projectData.codebaseUrl);
+      }
+      if (projectData.deploymentUrl) {
+        formData.append('deploymentUrl', projectData.deploymentUrl);
+      }
+
+      // Add files
+      projectData.files.forEach((file, index) => {
+        formData.append('files', file);
+      });
+
+      // Upload to backend
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.message || 'Upload failed');
+      }
+
+      // Add project to context
+      addProject(result.data.project);
+      
+      // Show success message with warnings if any
+      let message = 'Project uploaded successfully!';
+      if (result.data.warnings && result.data.warnings.length > 0) {
+        message += ` (${result.data.warnings.length} warnings)`;
+      }
+      
+      toast.success(message);
+
+      // Show warnings as separate toast
+      if (result.data.warnings && result.data.warnings.length > 0) {
+        setTimeout(() => {
+          result.data.warnings.forEach(warning => {
+            toast(warning, { icon: '⚠️' });
+          });
+        }, 1000);
+      }
       
       // Reset form
       setCurrentStep('project-type');
@@ -77,7 +119,8 @@ const UploadProject = () => {
       });
       
     } catch (error) {
-      toast.error('Failed to upload project');
+      console.error('Upload error:', error);
+      toast.error(error.message || 'Failed to upload project');
     } finally {
       setIsProcessing(false);
     }
