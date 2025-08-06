@@ -4,15 +4,24 @@
     {
       "src": "package.json",
       "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist"
-      }
+      "config": { "distDir": "dist" }
+    },
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
     }
   ],
-  "functions": {
-    "api/health.js": { "runtime": "nodejs18.x" },
-    "api/socket.js": { "runtime": "nodejs18.x" },
-    "api/projects.js": { "runtime": "nodejs18.x" },
-    "api/upload.js": { "runtime": "nodejs18.x" }
-  }
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/dist/index.html"
+    }
+  ]
 }
