@@ -11,28 +11,16 @@ import Settings from './pages/Settings';
 
 // Contexts
 import { SocketContext } from './contexts/SocketContext';
-import { ProjectContext } from './contexts/ProjectContext';
+import { ProjectProvider } from './contexts/ProjectContext.jsx';
 
 function App() {
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
   const [currentTab, setCurrentTab] = useState('dashboard');
-  const [projects, setProjects] = useState([]);
   const [user] = useState({
     name: 'john_dev',
     email: 'john@example.com'
   });
-
-  // Load projects from API
-  const loadProjects = async () => {
-    try {
-      const res = await fetch('/api/projects');
-      const { projects: dataProjects } = await res.json();
-      setProjects(dataProjects || []);
-    } catch {
-      setProjects([]);
-    }
-  };
 
   // Check API socket connection periodically
   useEffect(() => {
@@ -51,15 +39,9 @@ function App() {
 
     checkConnection();
     const interval = setInterval(checkConnection, 30000);
-    loadProjects();
 
     return () => clearInterval(interval);
   }, []);
-
-  const addProject = project => setProjects(prev => [project, ...prev]);
-  const updateProject = (id, updates) => setProjects(prev =>
-    prev.map(p => p.id === id ? { ...p, ...updates } : p)
-  );
 
   const renderCurrentTab = () => {
     switch (currentTab) {
@@ -73,13 +55,11 @@ function App() {
 
   return (
     <SocketContext.Provider value={{ socket, isConnected }}>
-      <ProjectContext.Provider value={{
-        projects, addProject, updateProject, loadProjects, user
-      }}>
+      <ProjectProvider>
         <div className="min-h-screen bg-gray-50">
           <Navbar
             currentTab={currentTab}
-            setCurrentTab={setCurrentTab}
+            onTabChange={setCurrentTab}
             isConnected={isConnected}
             user={user}
           />
@@ -88,7 +68,7 @@ function App() {
           </main>
           <Toaster position="top-right" />
         </div>
-      </ProjectContext.Provider>
+      </ProjectProvider>
     </SocketContext.Provider>
   );
 }
