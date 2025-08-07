@@ -206,3 +206,9 @@ export function optionalAuth(req, res, next) {
 
   next();
 }
+
+// Export commonly used functions directly
+export const verifyToken = AuthUtils.verifyToken;
+export const generateToken = AuthUtils.generateToken;
+export const hashPassword = AuthUtils.hashPassword;
+export const comparePassword = AuthUtils.comparePassword;

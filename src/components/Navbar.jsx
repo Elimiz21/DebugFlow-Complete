@@ -1,11 +1,12 @@
 import React from 'react';
-import { Activity, Home, Upload, FolderOpen, Settings } from 'lucide-react';
+import { Activity, Home, Upload, FolderOpen, Brain, Settings } from 'lucide-react';
 
 const Navbar = ({ currentTab, onTabChange, user, isConnected }) => {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: Home },
     { id: 'upload', label: 'Upload Project', icon: Upload },
     { id: 'projects', label: 'My Projects', icon: FolderOpen },
+    { id: 'analysis', label: 'AI Analysis', icon: Brain },
     { id: 'settings', label: 'Settings', icon: Settings }
   ];
 

@@ -1,16 +1,24 @@
-import React, { useState } from 'react';
-import { Key, Github, Brain, Cloud, Shield, User, Check, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Key, Github, Brain, Cloud, Shield, User, Check, X, Settings as SettingsIcon, Target } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { aiProviderManager } from '../services/AIProviderManager.js';
 
 const Settings = ({ user }) => {
   const [activeSection, setActiveSection] = useState('ai-platforms');
   const [credentials, setCredentials] = useState({
-    openaiKey: '',
-    claudeKey: '',
-    geminiKey: '',
+    openai: '',
+    claude: '',
+    gemini: '',
     githubToken: '',
     vercelToken: '',
     netlifyToken: ''
+  });
+  const [availableProviders, setAvailableProviders] = useState([]);
+  const [analysisPreferences, setAnalysisPreferences] = useState({
+    defaultAnalysisType: 'full-application',
+    focusAreas: [],
+    customInstructions: '',
+    autoAnalysis: false
   });
 
   const [integrations, setIntegrations] = useState({
@@ -33,11 +41,55 @@ const Settings = ({ user }) => {
 
   const sections = [
     { id: 'ai-platforms', label: 'AI Platforms', icon: Brain },
+    { id: 'ai-preferences', label: 'Analysis Preferences', icon: Target },
     { id: 'repositories', label: 'Code Repositories', icon: Github },
     { id: 'deployment', label: 'Deployment', icon: Cloud },
     { id: 'security', label: 'Security', icon: Shield },
     { id: 'profile', label: 'Profile', icon: User }
   ];
+
+  useEffect(() => {
+    loadAvailableProviders();
+  }, [credentials]);
+
+  const loadAvailableProviders = async () => {
+    try {
+      const providers = await aiProviderManager.getAvailableProviders(user.id, credentials);
+      setAvailableProviders(providers);
+    } catch (error) {
+      console.error('Failed to load providers:', error);
+    }
+  };
+
+  const testApiKey = async (provider, apiKey) => {
+    if (!apiKey || apiKey.length < 10) {
+      toast.error('Please enter a valid API key');
+      return false;
+    }
+
+    try {
+      const validation = await aiProviderManager.validateApiKey(provider, apiKey);
+      if (validation.valid) {
+        toast.success(`${validation.provider} API key validated successfully!`);
+        return true;
+      } else {
+        toast.error(`Invalid ${provider} API key: ${validation.error}`);
+        return false;
+      }
+    } catch (error) {
+      toast.error(`Failed to validate ${provider} API key`);
+      return false;
+    }
+  };
+
+  const saveApiKey = async (provider, key) => {
+    const isValid = await testApiKey(provider, key);
+    if (isValid) {
+      setCredentials(prev => ({ ...prev, [provider]: key }));
+      localStorage.setItem(`debugflow_${provider}_key`, key);
+      await loadAvailableProviders();
+    }
+  };
 
   const connectIntegration = async (type, name) => {
     try {
@@ -79,7 +131,34 @@ const Settings = ({ user }) => {
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-medium text-gray-900 mb-2">AI Platform Integrations</h3>
-        <p className="text-gray-600">Connect your AI services for enhanced debugging capabilities</p>
+        <p className="text-gray-600">Connect your AI services for enhanced debugging capabilities. Free tier usage limits apply.</p>
+      </div>
+
+      {/* Provider Status Overview */}
+      <div className="bg-blue-50 rounded-lg p-4">
+        <h4 className="font-medium text-blue-900 mb-3">Provider Status</h4>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {availableProviders.slice(0, 6).map((provider) => (
+            <div key={provider.id} className="bg-white rounded-md p-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="font-medium text-sm">{provider.name}</span>
+                <div className={`w-2 h-2 rounded-full ${
+                  provider.status === 'available' ? 'bg-green-500' : 
+                  provider.status === 'limit_reached' ? 'bg-orange-500' : 'bg-gray-400'
+                }`} />
+              </div>
+              <div className="text-xs text-gray-600">
+                {provider.tier === 'free' ? (
+                  <span>Free: {provider.remainingRequests || 0} remaining</span>
+                ) : provider.hasUserKey ? (
+                  <span>Premium: Connected</span>
+                ) : (
+                  <span>Premium: Requires API key</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="space-y-4">
@@ -131,33 +210,53 @@ const Settings = ({ user }) => {
       </div>
 
       <div className="bg-blue-50 rounded-lg p-4">
-        <h4 className="font-medium text-blue-900 mb-2">API Key Management</h4>
+        <h4 className="font-medium text-blue-900 mb-2">Premium API Key Management</h4>
         <p className="text-blue-700 text-sm mb-4">
-          Securely store your API keys. Keys are encrypted and never stored in plain text.
+          Add your own API keys for premium features and unlimited usage. Keys are stored locally and never transmitted to our servers.
         </p>
         
-        <div className="space-y-3">
-          <div>
-            <label className="block text-sm font-medium text-blue-900 mb-1">OpenAI API Key</label>
-            <input
-              type="password"
-              value={credentials.openaiKey}
-              onChange={(e) => setCredentials(prev => ({ ...prev, openaiKey: e.target.value }))}
-              placeholder="sk-..."
-              className="w-full p-2 border border-blue-300 rounded-md focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-blue-900 mb-1">Claude API Key</label>
-            <input
-              type="password"
-              value={credentials.claudeKey}
-              onChange={(e) => setCredentials(prev => ({ ...prev, claudeKey: e.target.value }))}
-              placeholder="sk-ant-..."
-              className="w-full p-2 border border-blue-300 rounded-md focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+        <div className="space-y-4">
+          {['openai', 'claude', 'gemini'].map((provider) => {
+            const providerKey = credentials[provider];
+            const isConnected = providerKey && providerKey.length > 10;
+            
+            return (
+              <div key={provider} className="bg-white rounded-md p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-sm font-medium text-gray-900">
+                    {provider.charAt(0).toUpperCase() + provider.slice(1)} API Key
+                  </label>
+                  {isConnected && (
+                    <span className="inline-flex items-center text-green-600 text-xs">
+                      <Check className="h-3 w-3 mr-1" />
+                      Connected
+                    </span>
+                  )}
+                </div>
+                <div className="flex space-x-2">
+                  <input
+                    type="password"
+                    value={providerKey}
+                    onChange={(e) => setCredentials(prev => ({ ...prev, [provider]: e.target.value }))}
+                    placeholder={provider === 'openai' ? 'sk-...' : provider === 'claude' ? 'sk-ant-...' : 'ai-...'}
+                    className="flex-1 p-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 text-sm"
+                  />
+                  <button
+                    onClick={() => saveApiKey(provider, providerKey)}
+                    disabled={!providerKey || providerKey.length < 10}
+                    className="px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  >
+                    Test
+                  </button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {provider === 'openai' && 'Get your key at platform.openai.com/api-keys'}
+                  {provider === 'claude' && 'Get your key at console.anthropic.com'}
+                  {provider === 'gemini' && 'Get your key at ai.google.dev'}
+                </p>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -227,10 +326,165 @@ const Settings = ({ user }) => {
     </div>
   );
 
+  const renderAIPreferences = () => {
+    const analysisTypes = {
+      'full-application': {
+        name: 'Full Application Analysis',
+        description: 'Comprehensive analysis of entire codebase'
+      },
+      'single-file': {
+        name: 'Single File Analysis',
+        description: 'Focused analysis of specific files'
+      },
+      'targeted-bug-fix': {
+        name: 'Targeted Bug Fix',
+        description: 'Debug and fix specific issues'
+      },
+      'security-audit': {
+        name: 'Security Audit',
+        description: 'Security-focused vulnerability analysis'
+      },
+      'performance-optimization': {
+        name: 'Performance Optimization',
+        description: 'Performance bottleneck identification'
+      }
+    };
+
+    const focusAreaOptions = [
+      'Security vulnerabilities',
+      'Performance optimizations',
+      'Code quality improvements',
+      'Architecture patterns',
+      'Error handling',
+      'Documentation',
+      'Testing coverage',
+      'Accessibility',
+      'Mobile responsiveness',
+      'Database optimization'
+    ];
+
+    return (
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Analysis Preferences</h3>
+          <p className="text-gray-600">Customize how AI analyzes your code and what areas to focus on</p>
+        </div>
+
+        {/* Default Analysis Type */}
+        <div className="bg-gray-50 rounded-lg p-4">
+          <h4 className="font-medium text-gray-900 mb-3">Default Analysis Type</h4>
+          <div className="space-y-3">
+            {Object.entries(analysisTypes).map(([type, info]) => (
+              <label key={type} className="flex items-start space-x-3 cursor-pointer">
+                <input
+                  type="radio"
+                  name="defaultAnalysisType"
+                  value={type}
+                  checked={analysisPreferences.defaultAnalysisType === type}
+                  onChange={(e) => setAnalysisPreferences(prev => ({ ...prev, defaultAnalysisType: e.target.value }))}
+                  className="mt-1"
+                />
+                <div>
+                  <div className="font-medium text-gray-900">{info.name}</div>
+                  <div className="text-sm text-gray-600">{info.description}</div>
+                </div>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Focus Areas */}
+        <div className="bg-gray-50 rounded-lg p-4">
+          <h4 className="font-medium text-gray-900 mb-3">Analysis Focus Areas</h4>
+          <p className="text-sm text-gray-600 mb-4">Select areas you want AI to prioritize during analysis</p>
+          <div className="grid grid-cols-2 gap-3">
+            {focusAreaOptions.map((area) => (
+              <label key={area} className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={analysisPreferences.focusAreas.includes(area)}
+                  onChange={(e) => {
+                    if (e.target.checked) {
+                      setAnalysisPreferences(prev => ({
+                        ...prev,
+                        focusAreas: [...prev.focusAreas, area]
+                      }));
+                    } else {
+                      setAnalysisPreferences(prev => ({
+                        ...prev,
+                        focusAreas: prev.focusAreas.filter(f => f !== area)
+                      }));
+                    }
+                  }}
+                  className="text-blue-600"
+                />
+                <span className="text-sm text-gray-700">{area}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {/* Custom Instructions */}
+        <div className="bg-gray-50 rounded-lg p-4">
+          <h4 className="font-medium text-gray-900 mb-3">Custom Analysis Instructions</h4>
+          <p className="text-sm text-gray-600 mb-3">
+            Provide specific instructions to guide AI analysis (e.g., "Focus on React hooks optimization" or "Prioritize SQL injection prevention")
+          </p>
+          <textarea
+            value={analysisPreferences.customInstructions}
+            onChange={(e) => setAnalysisPreferences(prev => ({ ...prev, customInstructions: e.target.value }))}
+            placeholder="Enter custom analysis instructions..."
+            className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 h-24 text-sm"
+          />
+        </div>
+
+        {/* Auto Analysis */}
+        <div className="bg-gray-50 rounded-lg p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="font-medium text-gray-900">Auto Analysis</h4>
+              <p className="text-sm text-gray-600">Automatically analyze new projects and files when uploaded</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={analysisPreferences.autoAnalysis}
+                onChange={(e) => setAnalysisPreferences(prev => ({ ...prev, autoAnalysis: e.target.checked }))}
+                className="sr-only"
+              />
+              <div className={`w-11 h-6 rounded-full shadow-inner transition-colors duration-300 ${
+                analysisPreferences.autoAnalysis ? 'bg-blue-600' : 'bg-gray-300'
+              }`}>
+                <div className={`w-4 h-4 bg-white rounded-full shadow transform transition-transform duration-300 ${
+                  analysisPreferences.autoAnalysis ? 'translate-x-6' : 'translate-x-1'
+                } mt-1`} />
+              </div>
+            </label>
+          </div>
+        </div>
+
+        {/* Save Button */}
+        <div className="flex justify-end">
+          <button
+            onClick={() => {
+              localStorage.setItem('debugflow_analysis_preferences', JSON.stringify(analysisPreferences));
+              toast.success('Analysis preferences saved!');
+            }}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+          >
+            Save Preferences
+          </button>
+        </div>
+      </div>
+    );
+  };
+
   const renderCurrentSection = () => {
     switch (activeSection) {
       case 'ai-platforms':
         return renderAIPlatforms();
+      case 'ai-preferences':
+        return renderAIPreferences();
       case 'repositories':
         return renderRepositories();
       case 'deployment':

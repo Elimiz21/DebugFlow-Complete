@@ -7,6 +7,7 @@ import Navbar from './components/Navbar';
 import Dashboard from './pages/Dashboard';
 import UploadProject from './pages/UploadProject';
 import MyProjects from './pages/MyProjects';
+import CodeAnalysis from './pages/CodeAnalysis';
 import Settings from './pages/Settings';
 
 // Contexts
@@ -201,6 +202,7 @@ function AppContent() {
       case 'dashboard': return <Dashboard projects={projects} user={user} />;
       case 'upload': return <UploadProject />;
       case 'projects': return <MyProjects />;
+      case 'analysis': return <CodeAnalysis user={user} />;
       case 'settings': return <Settings user={user} />;
       default: return <Dashboard projects={projects} user={user} />;
     }
