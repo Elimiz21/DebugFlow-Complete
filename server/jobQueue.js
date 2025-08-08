@@ -100,10 +100,11 @@ class JobQueue extends EventEmitter {
     
     // Check if unique job already exists
     if (unique) {
-      const existing = await database.get(
+      const existingResult = await database.query(
         `SELECT id FROM jobs WHERE id = ? AND status IN ('pending', 'processing')`,
         [jobId]
       );
+      const existing = existingResult[0];
       
       if (existing) {
         return existing.id;
@@ -184,7 +185,7 @@ class JobQueue extends EventEmitter {
     const availableSlots = queue.concurrency - queue.processing;
     
     // Get pending jobs
-    const jobs = await database.all(
+    const jobs = await database.query(
       `SELECT * FROM jobs 
        WHERE queue = ? 
        AND status = 'pending' 
@@ -332,12 +333,13 @@ class JobQueue extends EventEmitter {
 
   // Get job status
   async getJob(jobId) {
-    return database.get(`SELECT * FROM jobs WHERE id = ?`, [jobId]);
+    const result = await database.query(`SELECT * FROM jobs WHERE id = ?`, [jobId]);
+    return result[0];
   }
 
   // Get queue statistics
   async getQueueStats(queueName) {
-    const stats = await database.get(`
+    const statsResult = await database.query(`
       SELECT 
         COUNT(CASE WHEN status = 'pending' THEN 1 END) as pending,
         COUNT(CASE WHEN status = 'processing' THEN 1 END) as processing,
@@ -351,6 +353,7 @@ class JobQueue extends EventEmitter {
       WHERE queue = ?
       AND created_at > datetime('now', '-24 hours')
     `, [queueName]);
+    const stats = statsResult[0];
     
     const queue = this.queues.get(queueName);
     

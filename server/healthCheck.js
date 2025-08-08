@@ -34,7 +34,7 @@ class HealthCheckService {
     // Database health check
     this.registerCheck('database', async () => {
       try {
-        const result = await database.get('SELECT 1 as test');
+        const result = await database.query('SELECT 1 as test');
         return {
           status: 'healthy',
           message: 'Database connection is active',
@@ -274,7 +274,7 @@ class HealthCheckService {
   async getBasicHealth() {
     try {
       // Quick database check
-      await database.get('SELECT 1');
+      await database.query('SELECT 1');
       
       return {
         status: 'healthy',
@@ -305,15 +305,15 @@ class HealthCheckService {
     // Database metrics
     let dbMetrics = {};
     try {
-      const dbStats = await database.get(`
+      const dbStatsResult = await database.query(`
         SELECT 
           (SELECT COUNT(*) FROM users) as users,
           (SELECT COUNT(*) FROM projects) as projects,
           (SELECT COUNT(*) FROM bug_reports) as bugs,
-          (SELECT COUNT(*) FROM analysis_results) as analyses,
+          (SELECT COUNT(*) FROM ai_analyses) as analyses,
           (SELECT COUNT(*) FROM jobs WHERE status = 'pending') as pending_jobs
       `);
-      dbMetrics = dbStats;
+      dbMetrics = dbStatsResult[0];
     } catch (error) {
       dbMetrics = { error: error.message };
     }
