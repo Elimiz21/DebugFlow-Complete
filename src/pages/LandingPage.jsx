@@ -60,7 +60,13 @@ const LandingPage = () => {
   ];
 
   const handleGetStarted = () => {
-    navigate('/upload');
+    // Check if user is already logged in
+    const token = localStorage.getItem('debugflow_token');
+    if (token) {
+      navigate('/dashboard');
+    } else {
+      navigate('/login');
+    }
   };
 
   return (

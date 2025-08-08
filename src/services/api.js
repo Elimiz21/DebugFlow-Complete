@@ -1,7 +1,23 @@
 import axios from 'axios';
 
+// Determine the correct API base URL for different environments
+const getApiBaseUrl = () => {
+  // If explicitly set via environment variable, use that
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  
+  // In production (Vercel), use relative path for serverless functions
+  if (import.meta.env.PROD) {
+    return '/api';
+  }
+  
+  // In development, use localhost server
+  return 'http://localhost:3001/api';
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
+  baseURL: getApiBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
   },

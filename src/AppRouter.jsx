@@ -8,6 +8,7 @@ import LandingPage from './pages/LandingPage.jsx';
 import Features from './pages/Features.jsx';
 import Pricing from './pages/Pricing.jsx';
 import Blog from './pages/Blog.jsx';
+import Login from './pages/Login.jsx';
 import SEODashboard from './pages/SEODashboard.jsx';
 
 // Private application pages (existing)
@@ -133,23 +134,13 @@ const AppRouter = () => {
         {/* Authentication routes */}
         <Route path="/login" element={
           <PublicRoute>
-            <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-              <div className="text-center">
-                <h1 className="text-4xl font-bold mb-4">Login</h1>
-                <p className="text-gray-400">Sign in to access your DebugFlow dashboard</p>
-              </div>
-            </div>
+            <Login />
           </PublicRoute>
         } />
         
         <Route path="/register" element={
           <PublicRoute>
-            <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-              <div className="text-center">
-                <h1 className="text-4xl font-bold mb-4">Sign Up</h1>
-                <p className="text-gray-400">Create your DebugFlow account</p>
-              </div>
-            </div>
+            <Login />
           </PublicRoute>
         } />
         
