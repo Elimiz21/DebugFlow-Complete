@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <!-- Main sitemap containing all public pages -->
+  <sitemap>
+    <loc>https://debugflow.com/sitemap-pages.xml</loc>
+    <lastmod>2025-08-08T22:30:00+00:00</lastmod>
+  </sitemap>
+  
+  <!-- Blog/content sitemap -->
+  <sitemap>
+    <loc>https://debugflow.com/sitemap-blog.xml</loc>
+    <lastmod>2025-08-08T22:30:00+00:00</lastmod>
+  </sitemap>
+</sitemapindex>

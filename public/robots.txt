@@ -1,0 +1,66 @@
+# Robots.txt for DebugFlow - AI Code Debugging Platform
+# https://debugflow.com/robots.txt
+
+User-agent: *
+
+# Allow public pages for indexing
+Allow: /
+Allow: /features
+Allow: /pricing
+Allow: /docs
+Allow: /about
+Allow: /blog
+Allow: /contact
+Allow: /privacy
+Allow: /terms
+Allow: /security
+
+# Disallow private/authenticated pages
+Disallow: /dashboard
+Disallow: /upload
+Disallow: /debug
+Disallow: /analytics
+Disallow: /settings
+Disallow: /bug-reports
+Disallow: /code-analysis
+Disallow: /test-runner
+Disallow: /organizations
+Disallow: /login
+Disallow: /register
+
+# Disallow API endpoints and backend routes
+Disallow: /api/
+Disallow: /server/
+Disallow: /socket.io/
+
+# Disallow temporary and development files
+Disallow: /temp/
+Disallow: /tmp/
+Disallow: /.git/
+Disallow: /node_modules/
+Disallow: /src/
+Disallow: /database/
+Disallow: /*.log
+Disallow: /*.tmp
+
+# Allow specific file types
+Allow: /*.css
+Allow: /*.js
+Allow: /*.png
+Allow: /*.jpg
+Allow: /*.jpeg
+Allow: /*.gif
+Allow: /*.webp
+Allow: /*.svg
+Allow: /*.ico
+Allow: /*.pdf
+
+# Crawl-delay for respectful crawling
+Crawl-delay: 1
+
+# Sitemap location
+Sitemap: https://debugflow.com/sitemap.xml
+
+# Additional sitemaps
+Sitemap: https://debugflow.com/sitemap-pages.xml
+Sitemap: https://debugflow.com/sitemap-blog.xml

@@ -7,6 +7,8 @@ import socketServer from './socketServer.js';
 import database from '../database/database.js';
 import { aiHandler } from './aiHandler.js';
 import { verifyToken } from '../utils/auth.js';
+import jobQueue from './jobQueue.js';
+import healthCheck from './healthCheck.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,6 +25,44 @@ app.use(cors({
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '..', 'dist')));
 
+// Add health check middleware
+app.use(healthCheck.middleware());
+
+// Import consolidated API router
+import apiRouter from '../api/index.js';
+
+// Mount all API routes through the consolidated router
+app.use('/api', apiRouter);
+
+// Server-level health check endpoints (different from API health)
+app.get('/server/health', async (req, res) => {
+  const health = await healthCheck.getBasicHealth();
+  res.status(health.status === 'healthy' ? 200 : 503).json(health);
+});
+
+app.get('/server/health/detailed', async (req, res) => {
+  const health = await healthCheck.runAllChecks();
+  res.status(health.status === 'healthy' ? 200 : 503).json(health);
+});
+
+app.get('/server/metrics', async (req, res) => {
+  const metrics = await healthCheck.getMetrics();
+  res.json(metrics);
+});
+
+// Job queue status endpoint
+app.get('/api/jobs/stats', async (req, res) => {
+  try {
+    const stats = {};
+    for (const queue of ['default', 'analysis', 'email', 'reports', 'cleanup']) {
+      stats[queue] = await jobQueue.getQueueStats(queue);
+    }
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Health check for Socket.io server
 app.get('/socket-health', (req, res) => {
   const stats = socketServer.getServerStats();
@@ -36,79 +76,7 @@ app.get('/socket-health', (req, res) => {
   });
 });
 
-// AI Analysis endpoint
-app.post('/api/ai/analyze', async (req, res) => {
-  try {
-    // Verify authentication
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
-    }
-
-    const token = authHeader.substring(7);
-    const decoded = verifyToken(token);
-    
-    if (!decoded) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid or expired token'
-      });
-    }
-
-    const {
-      providerId,
-      systemPrompt,
-      analysisPrompt,
-      options,
-      userApiKeys
-    } = req.body;
-
-    // Process AI analysis on server
-    const result = await aiHandler.processAnalysis({
-      providerId,
-      systemPrompt,
-      analysisPrompt,
-      options,
-      userApiKeys
-    });
-
-    res.json({
-      success: true,
-      data: result
-    });
-
-  } catch (error) {
-    console.error('AI Analysis Error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Analysis failed'
-    });
-  }
-});
-
-// Validate API key endpoint
-app.post('/api/ai/validate-key', async (req, res) => {
-  try {
-    const { provider, apiKey } = req.body;
-    
-    const result = await aiHandler.validateApiKey(provider, apiKey);
-    
-    res.json({
-      success: result.valid,
-      data: result
-    });
-    
-  } catch (error) {
-    console.error('API Key Validation Error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Validation failed'
-    });
-  }
-});
+// Note: AI endpoints are now handled by the API router at /api/ai/*
 
 // Initialize database and Socket.io
 async function startServer() {
@@ -117,14 +85,26 @@ async function startServer() {
     await database.initialize();
     console.log('Database initialized successfully');
 
+    // Initialize job queue
+    await jobQueue.initialize();
+    jobQueue.registerDefaultHandlers();
+    jobQueue.scheduleRecurringJobs();
+    console.log('Job queue system initialized successfully');
+
     // Initialize Socket.io server
     socketServer.initialize(httpServer);
     console.log('Socket.io server initialized successfully');
+    
+    // Make io available globally for health checks
+    global.io = socketServer.io;
 
     const PORT = process.env.PORT || 3001;
     httpServer.listen(PORT, () => {
-      console.log(`🚀 DebugFlow Socket.io server running on port ${PORT}`);
-      console.log(`🌐 Health check available at http://localhost:${PORT}/socket-health`);
+      console.log(`🚀 DebugFlow server running on port ${PORT}`);
+      console.log(`🌐 API health check available at http://localhost:${PORT}/api/health`);
+      console.log(`🔧 Server health check available at http://localhost:${PORT}/server/health`);
+      console.log(`📊 Server metrics available at http://localhost:${PORT}/server/metrics`);
+      console.log(`🔌 Socket.io server initialized`);
     });
 
   } catch (error) {

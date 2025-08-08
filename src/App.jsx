@@ -8,15 +8,19 @@ import Dashboard from './pages/Dashboard';
 import UploadProject from './pages/UploadProject';
 import MyProjects from './pages/MyProjects';
 import CodeAnalysis from './pages/CodeAnalysis';
+import BugReports from './pages/BugReports';
+import DebugSession from './pages/DebugSession';
 import Settings from './pages/Settings';
+import Organization from './pages/Organization';
+import Analytics from './pages/Analytics';
 
 // Contexts
 import { SocketContext } from './contexts/SocketContext';
 import { ProjectProvider, useProjectContext } from './contexts/ProjectContext.jsx';
 
 // Inner component that uses project context
-function AppContent() {
-  const [currentTab, setCurrentTab] = useState('dashboard');
+function AppContent({ initialTab = 'dashboard' }) {
+  const [currentTab, setCurrentTab] = useState(initialTab);
   const [isConnected, setIsConnected] = useState(false);
   const [user, setUser] = useState(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -203,6 +207,10 @@ function AppContent() {
       case 'upload': return <UploadProject />;
       case 'projects': return <MyProjects />;
       case 'analysis': return <CodeAnalysis user={user} />;
+      case 'bugs': return <BugReports user={user} />;
+      case 'debug': return <DebugSession user={user} />;
+      case 'organization': return <Organization user={user} />;
+      case 'analytics': return <Analytics user={user} />;
       case 'settings': return <Settings user={user} />;
       default: return <Dashboard projects={projects} user={user} />;
     }
@@ -230,15 +238,13 @@ function AppContent() {
   );
 }
 
-function App() {
+function App({ initialTab }) {
   const [socket, setSocket] = useState(null);
   const [isConnected, setIsConnected] = useState(false);
 
   return (
     <SocketContext.Provider value={{ socket, isConnected }}>
-      <ProjectProvider>
-        <AppContent />
-      </ProjectProvider>
+      <AppContent initialTab={initialTab} />
     </SocketContext.Provider>
   );
 }

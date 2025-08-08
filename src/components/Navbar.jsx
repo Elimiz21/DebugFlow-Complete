@@ -1,5 +1,5 @@
 import React from 'react';
-import { Activity, Home, Upload, FolderOpen, Brain, Settings } from 'lucide-react';
+import { Activity, Home, Upload, FolderOpen, Brain, Bug, Users, Settings, Building2, BarChart3 } from 'lucide-react';
 
 const Navbar = ({ currentTab, onTabChange, user, isConnected }) => {
   const navItems = [
@@ -7,6 +7,10 @@ const Navbar = ({ currentTab, onTabChange, user, isConnected }) => {
     { id: 'upload', label: 'Upload Project', icon: Upload },
     { id: 'projects', label: 'My Projects', icon: FolderOpen },
     { id: 'analysis', label: 'AI Analysis', icon: Brain },
+    { id: 'bugs', label: 'Bug Reports', icon: Bug },
+    { id: 'debug', label: 'Debug Sessions', icon: Users },
+    { id: 'organization', label: 'Organization', icon: Building2 },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3 },
     { id: 'settings', label: 'Settings', icon: Settings }
   ];
 

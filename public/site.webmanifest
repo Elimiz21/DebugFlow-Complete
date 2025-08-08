@@ -1,0 +1,109 @@
+{
+  "name": "DebugFlow - AI Code Debugging Platform",
+  "short_name": "DebugFlow", 
+  "description": "AI-powered code debugging and analysis platform for developers",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en-US",
+  "categories": ["developer", "productivity", "tools"],
+  "screenshots": [
+    {
+      "src": "/screenshots/desktop-dashboard.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "platform": "wide",
+      "label": "DebugFlow Dashboard on Desktop"
+    },
+    {
+      "src": "/screenshots/mobile-analysis.png", 
+      "sizes": "750x1334",
+      "type": "image/png",
+      "platform": "narrow", 
+      "label": "Code Analysis on Mobile"
+    }
+  ],
+  "icons": [
+    {
+      "src": "/favicon-16x16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon-32x32.png", 
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192", 
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png", 
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Upload Project",
+      "short_name": "Upload", 
+      "description": "Upload a new project for AI analysis",
+      "url": "/upload",
+      "icons": [
+        {
+          "src": "/icons/upload-96x96.png",
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View your project dashboard", 
+      "url": "/dashboard",
+      "icons": [
+        {
+          "src": "/icons/dashboard-96x96.png", 
+          "sizes": "96x96"
+        }
+      ]
+    },
+    {
+      "name": "Bug Reports",
+      "short_name": "Bugs",
+      "description": "View bug reports and issues",
+      "url": "/bug-reports", 
+      "icons": [
+        {
+          "src": "/icons/bug-96x96.png",
+          "sizes": "96x96"
+        }
+      ]
+    }
+  ],
+  "prefer_related_applications": false,
+  "related_applications": [
+    {
+      "platform": "web",
+      "url": "https://debugflow.com"
+    }
+  ],
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "launch_handler": {
+    "client_mode": ["navigate-existing", "navigate-new"]
+  }
+}

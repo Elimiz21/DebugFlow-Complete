@@ -1,11 +1,15 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { SocketContext } from '../contexts/SocketContext';
-import { Code, Play, AlertCircle, Brain, Settings, Target, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Code, Play, AlertCircle, Brain, Settings, Target, Clock, CheckCircle, XCircle, Layers } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { aiAnalyzer } from '../services/AIAnalyzer.js';
+import { useProjectContext } from '../contexts/ProjectContext.jsx';
+import SemanticAnalysisView from '../components/SemanticAnalysisView';
+import BugPredictionView from '../components/BugPredictionView';
 
 const CodeAnalysis = ({ user }) => {
   const { socket } = useContext(SocketContext);
+  const { projects, selectedProject } = useProjectContext();
   const [code, setCode] = useState('');
   const [selectedFile, setSelectedFile] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -13,6 +17,9 @@ const CodeAnalysis = ({ user }) => {
   const [analysisType, setAnalysisType] = useState('single-file');
   const [userInstructions, setUserInstructions] = useState('');
   const [availableTypes, setAvailableTypes] = useState({});
+  const [activeTab, setActiveTab] = useState('code-analysis');
+  const [semanticAnalysis, setSemanticAnalysis] = useState(null);
+  const [bugPrediction, setBugPrediction] = useState(null);
 
   useEffect(() => {
     // Load available analysis types
@@ -279,6 +286,20 @@ const CodeAnalysis = ({ user }) => {
     );
   };
 
+  const tabs = [
+    { id: 'code-analysis', label: 'Code Analysis', icon: Brain, description: 'Traditional AI code analysis' },
+    { id: 'semantic-analysis', label: 'Semantic Analysis', icon: Layers, description: 'Advanced code understanding' },
+    { id: 'bug-prediction', label: 'Bug Prediction', icon: Target, description: 'Predictive bug analysis' }
+  ];
+
+  const handleSemanticAnalysisComplete = (analysis) => {
+    setSemanticAnalysis(analysis);
+  };
+
+  const handleBugPredictionComplete = (prediction) => {
+    setBugPrediction(prediction);
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -286,11 +307,36 @@ const CodeAnalysis = ({ user }) => {
         <p className="text-gray-600">Analyze your code with advanced AI for bugs, security issues, and optimizations</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Analysis Configuration */}
-        <div className="space-y-6">
-          {/* Analysis Type Selection */}
-          <div className="bg-white rounded-lg shadow-md p-6">
+      {/* Tab Navigation */}
+      <div className="bg-white rounded-lg shadow-md">
+        <div className="flex border-b border-gray-200">
+          {tabs.map(({ id, label, icon: Icon, description }) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={`flex items-center space-x-3 px-6 py-4 font-medium border-b-2 transition-colors ${
+                activeTab === id
+                  ? 'border-blue-500 text-blue-600 bg-blue-50'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Icon className="w-5 h-5" />
+              <div className="text-left">
+                <div className="font-medium">{label}</div>
+                <div className="text-xs text-gray-500">{description}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        <div className="p-6">
+          {/* Code Analysis Tab */}
+          {activeTab === 'code-analysis' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Analysis Configuration */}
+              <div className="space-y-6">
+                {/* Analysis Type Selection */}
+                <div className="bg-gray-50 rounded-lg p-6">
             <div className="flex items-center mb-4">
               <Target className="h-5 w-5 text-purple-600 mr-2" />
               <h2 className="text-lg font-semibold">Analysis Type</h2>
@@ -319,8 +365,8 @@ const CodeAnalysis = ({ user }) => {
             </div>
           </div>
 
-          {/* Code Input */}
-          <div className="bg-white rounded-lg shadow-md p-6">
+                {/* Code Input */}
+                <div className="bg-gray-50 rounded-lg p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center">
                 <Code className="h-5 w-5 text-blue-600 mr-2" />
@@ -369,28 +415,125 @@ const CodeAnalysis = ({ user }) => {
               <Brain className="h-4 w-4 mr-2" />
               {isAnalyzing ? 'Analyzing with AI...' : 'Analyze with AI'}
             </button>
-          </div>
-        </div>
-
-        {/* Analysis Results */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center mb-4">
-            <AlertCircle className="h-5 w-5 text-orange-600 mr-2" />
-            <h2 className="text-lg font-semibold">Analysis Results</h2>
-          </div>
-          
-          {isAnalyzing ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <span className="ml-3 text-gray-600">AI is analyzing your code...</span>
+                </div>
+              </div>
+              
+              {/* Analysis Results */}
+              <div className="bg-gray-50 rounded-lg p-6">
+                <div className="flex items-center mb-4">
+                  <AlertCircle className="h-5 w-5 text-orange-600 mr-2" />
+                  <h2 className="text-lg font-semibold">Analysis Results</h2>
+                </div>
+                
+                {isAnalyzing ? (
+                  <div className="flex items-center justify-center py-12">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <span className="ml-3 text-gray-600">AI is analyzing your code...</span>
+                  </div>
+                ) : results ? (
+                  renderAnalysisResults()
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Brain className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>AI analysis results will appear here</p>
+                    <p className="text-sm mt-2">Select an analysis type and paste your code to get started</p>
+                  </div>
+                )}
+              </div>
             </div>
-          ) : results ? (
-            renderAnalysisResults()
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              <Brain className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>AI analysis results will appear here</p>
-              <p className="text-sm mt-2">Select an analysis type and paste your code to get started</p>
+          )}
+
+          {/* Semantic Analysis Tab */}
+          {activeTab === 'semantic-analysis' && (
+            <div>
+              {selectedProject && selectedProject.files?.length > 0 ? (
+                <SemanticAnalysisView
+                  projectData={selectedProject}
+                  user={user}
+                  onAnalysisComplete={handleSemanticAnalysisComplete}
+                />
+              ) : (
+                <div className="text-center py-12">
+                  <Layers className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Select a Project</h3>
+                  <p className="text-gray-600 mb-6">
+                    Semantic analysis requires a complete project with multiple files.
+                    {projects.length === 0 
+                      ? ' Upload a project first to enable this feature.'
+                      : ' Select a project from your projects list.'
+                    }
+                  </p>
+                  
+                  {projects.length > 0 && (
+                    <div className="max-w-md mx-auto">
+                      <h4 className="font-medium text-gray-900 mb-3">Available Projects:</h4>
+                      <div className="space-y-2">
+                        {projects.slice(0, 3).map((project) => (
+                          <div key={project.id} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div>
+                              <div className="font-medium text-gray-900">{project.name}</div>
+                              <div className="text-sm text-gray-600">{project.language}</div>
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {project.files?.length || 0} files
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-3">
+                        Go to My Projects to select a project for semantic analysis
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Bug Prediction Tab */}
+          {activeTab === 'bug-prediction' && (
+            <div>
+              {selectedProject && selectedProject.files?.length > 0 ? (
+                <BugPredictionView
+                  projectData={selectedProject}
+                  user={user}
+                  onPredictionComplete={handleBugPredictionComplete}
+                />
+              ) : (
+                <div className="text-center py-12">
+                  <Target className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Select a Project</h3>
+                  <p className="text-gray-600 mb-6">
+                    Bug prediction requires analyzing complete project files and patterns.
+                    {projects.length === 0 
+                      ? ' Upload a project first to enable this feature.'
+                      : ' Select a project from your projects list.'
+                    }
+                  </p>
+                  
+                  {projects.length > 0 && (
+                    <div className="max-w-md mx-auto">
+                      <h4 className="font-medium text-gray-900 mb-3">Available Projects:</h4>
+                      <div className="space-y-2">
+                        {projects.slice(0, 3).map((project) => (
+                          <div key={project.id} className="flex items-center justify-between p-3 border rounded-lg">
+                            <div>
+                              <div className="font-medium text-gray-900">{project.name}</div>
+                              <div className="text-sm text-gray-600">{project.language}</div>
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {project.files?.length || 0} files
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-3">
+                        Go to My Projects to select a project for bug prediction
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>

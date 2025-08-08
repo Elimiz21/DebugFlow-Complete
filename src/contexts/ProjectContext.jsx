@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-const ProjectContext = createContext();
+export const ProjectContext = createContext();
 
 export function ProjectProvider({ children }) {
   const [projects, setProjects] = useState([]);
