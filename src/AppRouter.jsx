@@ -7,6 +7,8 @@ import { ProjectProvider } from './contexts/ProjectContext.jsx';
 import LandingPage from './pages/LandingPage.jsx';
 import Features from './pages/Features.jsx';
 import Pricing from './pages/Pricing.jsx';
+import Blog from './pages/Blog.jsx';
+import SEODashboard from './pages/SEODashboard.jsx';
 
 // Private application pages (existing)
 import App from './App.jsx';
@@ -80,12 +82,7 @@ const AppRouter = () => {
         
         <Route path="/blog" element={
           <PublicRoute>
-            <div className="min-h-screen bg-gray-900 text-white flex items-center justify-center">
-              <div className="text-center">
-                <h1 className="text-4xl font-bold mb-4">Developer Blog</h1>
-                <p className="text-gray-400">Insights, tutorials, and best practices for AI-powered debugging</p>
-              </div>
-            </div>
+            <Blog />
           </PublicRoute>
         } />
         
@@ -234,6 +231,12 @@ const AppRouter = () => {
             <ProjectProvider>
               <App initialTab="settings" />
             </ProjectProvider>
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/seo-dashboard" element={
+          <ProtectedRoute>
+            <SEODashboard />
           </ProtectedRoute>
         } />
         
