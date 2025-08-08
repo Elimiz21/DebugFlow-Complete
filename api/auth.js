@@ -1,6 +1,14 @@
 import { AuthUtils } from '../utils/auth.js';
 import database from '../database/database.js';
+import memoryDatabase from '../database/memoryDatabase.js';
 import Joi from 'joi';
+
+// Use memory database in serverless environment (Vercel), regular database locally
+const getDatabase = () => {
+  // Check if we're in Vercel serverless environment
+  const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+  return isServerless ? memoryDatabase : database;
+};
 
 // Validation schemas
 const registerSchema = Joi.object({
@@ -29,15 +37,16 @@ export default async function handler(req, res) {
   }
 
   // Initialize database connection
-  if (!database.db) {
-    try {
-      await database.initialize();
-    } catch (error) {
-      return res.status(500).json({
-        success: false,
-        message: 'Database initialization failed'
-      });
-    }
+  const db = getDatabase();
+  try {
+    await db.initialize();
+  } catch (error) {
+    console.error('Database initialization error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Database initialization failed',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 
   const { method } = req;
@@ -78,6 +87,8 @@ async function handleAuthPost(req, res) {
 
 async function handleRegister(req, res) {
   try {
+    const db = getDatabase();
+    
     // Validate input
     const { error, value } = registerSchema.validate(req.body);
     if (error) {
@@ -89,17 +100,16 @@ async function handleRegister(req, res) {
 
     const { name, email, password, company, timezone } = value;
 
-    // Validate password strength
-    const passwordValidation = AuthUtils.validatePassword(password);
-    if (!passwordValidation.isValid) {
+    // Basic password validation (minimum 8 characters for demo)
+    if (password.length < 8) {
       return res.status(400).json({
         success: false,
-        message: passwordValidation.message
+        message: 'Password must be at least 8 characters long'
       });
     }
 
     // Check if user already exists
-    const existingUser = await database.getUserByEmail(email);
+    const existingUser = await db.getUserByEmail(email);
     if (existingUser) {
       return res.status(409).json({
         success: false,
@@ -111,7 +121,7 @@ async function handleRegister(req, res) {
     const password_hash = await AuthUtils.hashPassword(password);
 
     // Create user
-    const result = await database.createUser({
+    const result = await db.createUser({
       name,
       email,
       password_hash,
@@ -120,7 +130,7 @@ async function handleRegister(req, res) {
     });
 
     // Get the created user
-    const user = await database.getUserById(result.lastID);
+    const user = await db.getUserById(result.lastID);
     
     // Generate JWT token
     const token = AuthUtils.generateToken(user);
@@ -148,6 +158,8 @@ async function handleRegister(req, res) {
 
 async function handleLogin(req, res) {
   try {
+    const db = getDatabase();
+    
     // Validate input
     const { error, value } = loginSchema.validate(req.body);
     if (error) {
@@ -160,7 +172,7 @@ async function handleLogin(req, res) {
     const { email, password } = value;
 
     // Get user by email
-    const user = await database.getUserByEmail(email);
+    const user = await db.getUserByEmail(email);
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -222,7 +234,8 @@ async function handleVerifyToken(req, res) {
     }
 
     // Get fresh user data
-    const user = await database.getUserById(decoded.id);
+    const db = getDatabase();
+    const user = await db.getUserById(decoded.id);
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -271,7 +284,8 @@ async function handleAuthGet(req, res) {
       });
     }
 
-    const user = await database.getUserById(decoded.id);
+    const db = getDatabase();
+    const user = await db.getUserById(decoded.id);
     if (!user) {
       return res.status(404).json({
         success: false,
