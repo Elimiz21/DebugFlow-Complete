@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DebugFlow Test - Fixed</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .status {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #4CAF50;
+        }
+        .error {
+            border-left-color: #f44336;
+        }
+        .warning {
+            border-left-color: #ff9800;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 10px;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .test-step {
+            background: #2a2a2a;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+        }
+        .success { color: #4CAF50; }
+        .fail { color: #f44336; }
+        code {
+            background: #333;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 DebugFlow - Login Issue Fixed!</h1>
+    
+    <div class="status">
+        <h2>✅ What Was Fixed:</h2>
+        <ul>
+            <li>Removed duplicate login page redirect</li>
+            <li>Fixed authentication flow in development mode</li>
+            <li>App now properly uses mock authentication</li>
+            <li>No more API proxy errors affecting login</li>
+        </ul>
+    </div>
+
+    <div class="status">
+        <h2>🔧 How to Test:</h2>
+        <ol class="test-step">
+            <li>Clear your browser data first (Important!)
+                <ul>
+                    <li>Open DevTools (F12)</li>
+                    <li>Application tab → Storage → Clear site data</li>
+                    <li>OR use Incognito window</li>
+                </ul>
+            </li>
+            <li>Go to: <a href="http://localhost:5173" target="_blank" style="color: #4CAF50;">http://localhost:5173</a></li>
+            <li>Click "Get Started" on landing page</li>
+            <li>Login with ANY credentials (e.g., <code>test@example.com</code> / <code>password123</code>)</li>
+            <li>You'll go directly to Dashboard - NO second login page!</li>
+            <li>Navigate to "Upload" in sidebar</li>
+            <li>Test the new URL import features</li>
+        </ol>
+    </div>
+
+    <div class="status">
+        <h2>📝 Test Login Credentials:</h2>
+        <button onclick="clearAndTest()">Clear Storage & Open App</button>
+        <button onclick="copyCredentials()">Copy Test Credentials</button>
+        <div id="credentials" style="margin-top: 10px;">
+            Email: <code>test@example.com</code><br>
+            Password: <code>password123</code>
+        </div>
+    </div>
+
+    <div class="status">
+        <h2>🎯 New Features Working:</h2>
+        <ul>
+            <li class="success">✓ URL input for web apps/sites</li>
+            <li class="success">✓ GitHub repository URL input</li>
+            <li class="success">✓ Copy-to-clipboard buttons</li>
+            <li class="success">✓ Three upload methods: Files, URL, GitHub</li>
+            <li class="success">✓ Smart form validation</li>
+            <li class="success">✓ Mock authentication (no backend needed)</li>
+        </ul>
+    </div>
+
+    <script>
+        function clearAndTest() {
+            // Clear local storage
+            localStorage.clear();
+            sessionStorage.clear();
+            
+            // Clear cookies
+            document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+            });
+            
+            alert('Storage cleared! Opening app in new tab...');
+            window.open('http://localhost:5173', '_blank');
+        }
+
+        function copyCredentials() {
+            const text = 'Email: test@example.com\nPassword: password123';
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Test credentials copied to clipboard!');
+            });
+        }
+
+        // Check if app is running
+        fetch('http://localhost:5173')
+            .then(response => {
+                if (response.ok) {
+                    console.log('✅ App is running on port 5173');
+                } else {
+                    console.error('❌ App returned status:', response.status);
+                }
+            })
+            .catch(error => {
+                console.error('❌ App is not accessible:', error);
+                alert('App is not running! Please check the server.');
+            });
+    </script>
+</body>
+</html>

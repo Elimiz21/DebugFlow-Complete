@@ -5,12 +5,30 @@ export const ProjectContext = createContext();
 export function ProjectProvider({ children }) {
   const [projects, setProjects] = useState([]);
 
-  // Load projects from API
+  // Load projects from API (or use mock data in development)
   const loadProjects = async () => {
     try {
       const token = localStorage.getItem('debugflow_token');
       if (!token) {
         setProjects([]);
+        return;
+      }
+
+      // In development, use mock data
+      if (import.meta.env.DEV) {
+        console.log('Using mock projects data');
+        setProjects([
+          {
+            id: '1',
+            name: 'Sample Project',
+            type: 'web-app',
+            language: 'JavaScript',
+            status: 'completed',
+            created_at: new Date().toISOString(),
+            file_count: 5,
+            bugs_found: 2
+          }
+        ]);
         return;
       }
 
@@ -30,7 +48,23 @@ export function ProjectProvider({ children }) {
       }
     } catch (error) {
       console.error('Error loading projects:', error);
-      setProjects([]);
+      // In development, provide mock data on error
+      if (import.meta.env.DEV) {
+        setProjects([
+          {
+            id: '1',
+            name: 'Sample Project',
+            type: 'web-app',
+            language: 'JavaScript',
+            status: 'completed',
+            created_at: new Date().toISOString(),
+            file_count: 5,
+            bugs_found: 2
+          }
+        ]);
+      } else {
+        setProjects([]);
+      }
     }
   };
 

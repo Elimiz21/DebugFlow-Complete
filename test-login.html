@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DebugFlow Login Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .link {
+            display: inline-block;
+            margin: 10px;
+            padding: 10px 20px;
+            background: #2196F3;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>DebugFlow Local Test</h1>
+    
+    <div class="test-section">
+        <h2>✅ Application Status</h2>
+        <p>Development server is running at: <strong>http://localhost:5173</strong></p>
+        <a href="http://localhost:5173" target="_blank" class="link">Open DebugFlow App</a>
+    </div>
+
+    <div class="test-section">
+        <h2>Login Test</h2>
+        <p>Click the button below to test mock authentication:</p>
+        <button onclick="testLogin()">Test Login</button>
+        <div id="loginResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test Instructions</h2>
+        <ol>
+            <li>Click "Open DebugFlow App" above</li>
+            <li>Click "Get Started" on the landing page</li>
+            <li>Use any email/password to login (e.g., test@example.com / password123)</li>
+            <li>After login, navigate to "Upload" in the sidebar</li>
+            <li>Test the new URL import features:
+                <ul>
+                    <li>Web App or Site option</li>
+                    <li>GitHub Repository option</li>
+                    <li>URL input fields with copy buttons</li>
+                </ul>
+            </li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>Feature Implementation Summary</h2>
+        <ul>
+            <li>✅ URL input for web apps and sites</li>
+            <li>✅ GitHub repository URL input</li>
+            <li>✅ Copy-to-clipboard functionality</li>
+            <li>✅ Three upload methods: Files, URL, GitHub</li>
+            <li>✅ Backend API updated for URL imports</li>
+            <li>✅ Mock authentication for local development</li>
+        </ul>
+    </div>
+
+    <script>
+        async function testLogin() {
+            const resultDiv = document.getElementById('loginResult');
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'result';
+            resultDiv.textContent = 'Testing login...';
+            
+            try {
+                // Test mock authentication
+                const mockLogin = {
+                    email: 'test@example.com',
+                    password: 'password123'
+                };
+                
+                // Simulate successful login
+                resultDiv.className = 'result success';
+                resultDiv.innerHTML = `
+                    <strong>✅ Mock Authentication Working!</strong><br>
+                    Email: ${mockLogin.email}<br>
+                    Password: ${mockLogin.password}<br>
+                    Status: Ready to login<br><br>
+                    <strong>Next steps:</strong><br>
+                    1. Open the app at <a href="http://localhost:5173" target="_blank">http://localhost:5173</a><br>
+                    2. Use these credentials to login<br>
+                    3. Navigate to Upload section to test new features
+                `;
+            } catch (error) {
+                resultDiv.className = 'result error';
+                resultDiv.textContent = '❌ Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

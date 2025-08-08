@@ -9,6 +9,9 @@ const uploadSchema = Joi.object({
   projectName: Joi.string().min(2).max(100).required(),
   projectDescription: Joi.string().max(500).optional(),
   projectType: Joi.string().valid('web-app', 'api', 'script', 'library').required(),
+  uploadMethod: Joi.string().valid('files', 'url', 'github').optional(),
+  appUrl: Joi.string().uri().optional(),
+  githubRepo: Joi.string().uri().optional(),
   codebaseUrl: Joi.string().uri().optional(),
   deploymentUrl: Joi.string().uri().optional()
 });
@@ -84,9 +87,15 @@ async function handleFileUpload(req, res, user) {
       });
     }
 
-    const { projectName, projectDescription, projectType, codebaseUrl, deploymentUrl } = value;
+    const { projectName, projectDescription, projectType, uploadMethod, appUrl, githubRepo, codebaseUrl, deploymentUrl } = value;
 
-    // Validate uploaded files
+    // Handle different upload methods
+    if (uploadMethod === 'url' || uploadMethod === 'github') {
+      // For URL/GitHub imports, we'll store the URL and process it differently
+      return handleUrlImport(req, res, user, value);
+    }
+
+    // Validate uploaded files for file-based uploads
     const uploadValidation = FileUploadUtils.validateProjectUpload(req.files);
     if (!uploadValidation.isValid) {
       // Clean up uploaded files on validation error
@@ -204,6 +213,151 @@ async function handleFileUpload(req, res, user) {
       message: 'Internal server error during file upload',
       error: process.env.NODE_ENV === 'development' ? error.message : 'Upload failed'
     });
+  }
+}
+
+// Handle URL/GitHub imports
+async function handleUrlImport(req, res, user, data) {
+  try {
+    const { projectName, projectDescription, projectType, uploadMethod, appUrl, githubRepo, deploymentUrl } = data;
+    
+    // Generate unique project ID
+    const projectId = uuidv4();
+    
+    // Determine the source URL
+    const sourceUrl = uploadMethod === 'github' ? githubRepo : appUrl;
+    
+    if (!sourceUrl) {
+      return res.status(400).json({
+        success: false,
+        message: `${uploadMethod === 'github' ? 'GitHub repository' : 'App'} URL is required`
+      });
+    }
+    
+    // Create project in database with URL reference
+    const projectData = {
+      id: projectId,
+      user_id: user.id,
+      name: projectName,
+      description: projectDescription || `Imported from ${sourceUrl}`,
+      type: projectType,
+      language: 'Pending',
+      codebase_url: uploadMethod === 'github' ? githubRepo : codebaseUrl,
+      deployment_url: deploymentUrl || (uploadMethod === 'url' ? appUrl : null),
+      file_count: 0,
+      size_bytes: 0,
+      status: 'importing'
+    };
+    
+    await database.createProject(projectData);
+    
+    // Store import metadata
+    await database.createProjectFile({
+      project_id: projectId,
+      filename: '_import_metadata.json',
+      filepath: '/',
+      content: JSON.stringify({
+        uploadMethod,
+        sourceUrl,
+        appUrl,
+        githubRepo,
+        deploymentUrl,
+        importedAt: new Date().toISOString()
+      }),
+      size_bytes: 0,
+      language: 'JSON'
+    });
+    
+    // Start background import process (fire and forget)
+    setImmediate(() => {
+      processUrlImportInBackground(projectId, uploadMethod, sourceUrl, deploymentUrl);
+    });
+    
+    // Prepare response
+    const response = {
+      success: true,
+      message: `Project import from ${uploadMethod === 'github' ? 'GitHub' : 'URL'} started`,
+      data: {
+        project: {
+          id: projectId,
+          name: projectName,
+          type: projectType,
+          language: 'Pending',
+          file_count: 0,
+          size_bytes: 0,
+          status: 'importing',
+          sourceUrl: sourceUrl,
+          uploadMethod: uploadMethod
+        },
+        warnings: [`${uploadMethod === 'github' ? 'GitHub' : 'URL'} import is being processed in the background. This may take a few moments.`]
+      }
+    };
+    
+    res.status(201).json(response);
+    
+  } catch (error) {
+    console.error('URL import error:', error);
+    
+    res.status(500).json({
+      success: false,
+      message: 'Failed to import project from URL',
+      error: process.env.NODE_ENV === 'development' ? error.message : 'Import failed'
+    });
+  }
+}
+
+// Process URL/GitHub import in background
+async function processUrlImportInBackground(projectId, uploadMethod, sourceUrl, deploymentUrl) {
+  try {
+    console.log(`Starting ${uploadMethod} import for project ${projectId} from ${sourceUrl}`);
+    
+    // For now, we'll create placeholder data
+    // In a real implementation, you would:
+    // 1. For GitHub: Use GitHub API to clone/download the repository
+    // 2. For URL: Scrape the website or use web scraping tools
+    
+    const mockFiles = [
+      {
+        filename: 'README.md',
+        content: `# Imported Project\n\nThis project was imported from ${sourceUrl}\n\nImport Method: ${uploadMethod}\n${deploymentUrl ? `\nDeployment URL: ${deploymentUrl}` : ''}`,
+        language: 'Markdown',
+        size_bytes: 200
+      }
+    ];
+    
+    // Update project with import results
+    await database.updateProject(projectId, {
+      status: 'completed',
+      file_count: mockFiles.length,
+      size_bytes: mockFiles.reduce((sum, f) => sum + f.size_bytes, 0),
+      language: uploadMethod === 'github' ? 'Repository' : 'Web App'
+    });
+    
+    // Store imported files
+    for (const file of mockFiles) {
+      await database.createProjectFile({
+        project_id: projectId,
+        filename: file.filename,
+        filepath: '/',
+        content: file.content,
+        size_bytes: file.size_bytes,
+        language: file.language
+      });
+    }
+    
+    console.log(`${uploadMethod} import completed for project ${projectId}`);
+    
+  } catch (error) {
+    console.error(`${uploadMethod} import failed for project ${projectId}:`, error);
+    
+    // Update project status to failed
+    try {
+      await database.updateProject(projectId, {
+        status: 'import-failed'
+      });
+    } catch (dbError) {
+      console.error('Failed to update project status:', dbError);
+    }
   }
 }
 

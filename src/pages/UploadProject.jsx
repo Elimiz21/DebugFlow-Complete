@@ -1,8 +1,9 @@
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, Globe, FileText, Github, ArrowRight, X } from 'lucide-react';
+import { Upload, Globe, FileText, Github, ArrowRight, X, Link, Copy, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useProjectContext } from '../contexts/ProjectContext.jsx';
+import api from '../services/api.js';
 
 const UploadProject = () => {
   const { addProject } = useProjectContext();
@@ -15,9 +16,12 @@ const UploadProject = () => {
     codebaseUrl: '',
     accessType: 'read-only',
     githubRepo: '',
-    deploymentUrl: ''
+    deploymentUrl: '',
+    appUrl: '',
+    uploadMethod: 'files' // 'files', 'url', or 'github'
   });
   const [isProcessing, setIsProcessing] = useState(false);
+  const [copiedField, setCopiedField] = useState(null);
 
   const onDrop = useCallback((acceptedFiles) => {
     setProjectData(prev => ({
@@ -52,34 +56,100 @@ const UploadProject = () => {
         return;
       }
 
-      // Prepare form data
+      // In development, use mock upload
+      if (import.meta.env.DEV) {
+        // Simulate upload delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        // Create mock project based on upload method
+        const mockProject = {
+          id: Date.now().toString(),
+          name: projectData.name || 'New Project',
+          type: projectType === 'app' ? 'web-app' : projectType === 'files' ? 'script' : 'library',
+          language: projectData.uploadMethod === 'github' ? 'Repository' : 'JavaScript',
+          status: 'analyzing',
+          created_at: new Date().toISOString(),
+          file_count: projectData.uploadMethod === 'files' ? projectData.files.length : 0,
+          bugs_found: 0,
+          sourceUrl: projectData.githubRepo || projectData.appUrl || null,
+          uploadMethod: projectData.uploadMethod
+        };
+        
+        // Add project to context
+        addProject(mockProject);
+        
+        // Show success message
+        const successMessage = projectData.uploadMethod === 'github' 
+          ? `GitHub repository "${projectData.name}" imported successfully!`
+          : projectData.uploadMethod === 'url'
+          ? `Web app "${projectData.name}" imported successfully!`
+          : `Project "${projectData.name}" uploaded successfully!`;
+          
+        toast.success(successMessage);
+        
+        if (projectData.uploadMethod !== 'files') {
+          setTimeout(() => {
+            toast('Import is being processed in the background', { icon: '⚙️' });
+          }, 500);
+        }
+        
+        // Reset form
+        setCurrentStep('project-type');
+        setProjectType(null);
+        setProjectData({
+          name: '',
+          description: '',
+          files: [],
+          codebaseUrl: '',
+          accessType: 'read-only',
+          githubRepo: '',
+          deploymentUrl: '',
+          appUrl: '',
+          uploadMethod: 'files'
+        });
+        
+        return;
+      }
+
+      // Production code - prepare form data for real API
       const formData = new FormData();
       formData.append('projectName', projectData.name || 'New Project');
       formData.append('projectDescription', projectData.description || '');
       formData.append('projectType', projectType === 'app' ? 'web-app' : projectType === 'files' ? 'script' : 'library');
+      formData.append('uploadMethod', projectData.uploadMethod);
+      
+      // Add URL/GitHub data based on upload method
+      if (projectData.uploadMethod === 'url' && projectData.appUrl) {
+        formData.append('appUrl', projectData.appUrl);
+      }
+      
+      if (projectData.uploadMethod === 'github' && projectData.githubRepo) {
+        formData.append('githubRepo', projectData.githubRepo);
+      }
       
       if (projectData.codebaseUrl) {
         formData.append('codebaseUrl', projectData.codebaseUrl);
       }
+      
       if (projectData.deploymentUrl) {
         formData.append('deploymentUrl', projectData.deploymentUrl);
       }
 
-      // Add files
-      projectData.files.forEach((file, index) => {
-        formData.append('files', file);
-      });
+      // Add files only if upload method is 'files'
+      if (projectData.uploadMethod === 'files') {
+        projectData.files.forEach((file, index) => {
+          formData.append('files', file);
+        });
+      }
 
-      // Upload to backend
-      const response = await fetch('/api/upload', {
-        method: 'POST',
+      // Upload to backend using api service
+      const response = await api.post('/upload', formData, {
         headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: formData
+          'Content-Type': 'multipart/form-data'
+        }
       });
 
-      const result = await response.json();
+      const result = response.data;
 
       if (!result.success) {
         throw new Error(result.message || 'Upload failed');
@@ -115,7 +185,9 @@ const UploadProject = () => {
         codebaseUrl: '',
         accessType: 'read-only',
         githubRepo: '',
-        deploymentUrl: ''
+        deploymentUrl: '',
+        appUrl: '',
+        uploadMethod: 'files'
       });
       
     } catch (error) {
@@ -131,6 +203,26 @@ const UploadProject = () => {
       ...prev,
       files: prev.files.filter((_, i) => i !== index)
     }));
+  };
+
+  const handleCopyToClipboard = async (text, field) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(field);
+      toast.success('Copied to clipboard!');
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch (err) {
+      toast.error('Failed to copy to clipboard');
+    }
+  };
+
+  const extractRepoNameFromUrl = (url) => {
+    // Extract repository name from GitHub URL
+    const match = url.match(/github\.com\/([^\/]+\/[^\/\s]+)/);
+    if (match) {
+      return match[1].replace(/\.git$/, '');
+    }
+    return '';
   };
 
   return (
@@ -179,7 +271,7 @@ const UploadProject = () => {
           </div>
         )}
 
-        {/* Step 2: Project Details (for apps/sites) */}
+        {/* Step 2: Project Details (for apps/sites and repos) */}
         {currentStep === 'project-details' && (
           <div className="space-y-6">
             <button
@@ -189,7 +281,9 @@ const UploadProject = () => {
               ← Back
             </button>
             
-            <h3 className="text-lg font-semibold mb-6">Project Details</h3>
+            <h3 className="text-lg font-semibold mb-6">
+              {projectType === 'repo' ? 'GitHub Repository Details' : 'Web App/Site Details'}
+            </h3>
             
             <div className="space-y-4">
               <div>
@@ -200,67 +294,220 @@ const UploadProject = () => {
                   type="text"
                   value={projectData.name}
                   onChange={(e) => setProjectData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="My Awesome App"
+                  placeholder={projectType === 'repo' ? 'My Repository' : 'My Awesome App'}
                   className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
+              {/* Upload Method Selection */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Upload Project Files
+                  How would you like to import your {projectType === 'repo' ? 'repository' : 'app'}?
                 </label>
-                <div
-                  {...getRootProps()}
-                  className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
-                    isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
-                  }`}
-                >
-                  <input {...getInputProps()} />
-                  {isDragActive ? (
-                    <p className="text-blue-500">Drop your project files here...</p>
-                  ) : (
-                    <>
-                      <Upload className="mx-auto mb-4 text-gray-400" size={48} />
-                      <p className="text-lg mb-2">
-                        Drag & drop your project files here, or click to select
-                      </p>
-                      <p className="text-sm text-gray-500">
-                        Supports all major programming languages
-                      </p>
-                    </>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <button
+                    onClick={() => setProjectData(prev => ({ ...prev, uploadMethod: 'files' }))}
+                    className={`p-3 border-2 rounded-lg transition-colors ${
+                      projectData.uploadMethod === 'files' 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <Upload className="mx-auto mb-2" size={24} />
+                    <span className="text-sm">Upload Files</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => setProjectData(prev => ({ ...prev, uploadMethod: 'url' }))}
+                    className={`p-3 border-2 rounded-lg transition-colors ${
+                      projectData.uploadMethod === 'url' 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <Link className="mx-auto mb-2" size={24} />
+                    <span className="text-sm">Enter URL</span>
+                  </button>
+                  
+                  <button
+                    onClick={() => setProjectData(prev => ({ ...prev, uploadMethod: 'github' }))}
+                    className={`p-3 border-2 rounded-lg transition-colors ${
+                      projectData.uploadMethod === 'github' 
+                        ? 'border-blue-500 bg-blue-50' 
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                  >
+                    <Github className="mx-auto mb-2" size={24} />
+                    <span className="text-sm">GitHub Link</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* URL Input Section */}
+              {projectData.uploadMethod === 'url' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    {projectType === 'repo' ? 'Repository URL' : 'App/Site URL'}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="url"
+                      value={projectData.appUrl}
+                      onChange={(e) => setProjectData(prev => ({ ...prev, appUrl: e.target.value }))}
+                      placeholder={projectType === 'repo' ? 'https://github.com/username/repo' : 'https://your-app.com'}
+                      className="w-full p-3 pr-12 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <button
+                      onClick={() => handleCopyToClipboard(projectData.appUrl, 'appUrl')}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 hover:bg-gray-100 rounded"
+                      title="Copy URL"
+                    >
+                      {copiedField === 'appUrl' ? (
+                        <CheckCircle className="text-green-500" size={20} />
+                      ) : (
+                        <Copy className="text-gray-500" size={20} />
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Enter the full URL of your {projectType === 'repo' ? 'repository' : 'deployed application'}
+                  </p>
+                </div>
+              )}
+
+              {/* GitHub Repository Input */}
+              {projectData.uploadMethod === 'github' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    GitHub Repository URL
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="url"
+                      value={projectData.githubRepo}
+                      onChange={(e) => {
+                        const url = e.target.value;
+                        setProjectData(prev => ({ 
+                          ...prev, 
+                          githubRepo: url,
+                          name: prev.name || extractRepoNameFromUrl(url)
+                        }));
+                      }}
+                      placeholder="https://github.com/username/repository"
+                      className="w-full p-3 pr-12 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                    <button
+                      onClick={() => handleCopyToClipboard(projectData.githubRepo, 'githubRepo')}
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 hover:bg-gray-100 rounded"
+                      title="Copy GitHub URL"
+                    >
+                      {copiedField === 'githubRepo' ? (
+                        <CheckCircle className="text-green-500" size={20} />
+                      ) : (
+                        <Copy className="text-gray-500" size={20} />
+                      )}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Paste your GitHub repository URL (public repos only for now)
+                  </p>
+                  
+                  {/* Optional: Deployment URL for GitHub repos */}
+                  <div className="mt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Deployment URL (Optional)
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="url"
+                        value={projectData.deploymentUrl}
+                        onChange={(e) => setProjectData(prev => ({ ...prev, deploymentUrl: e.target.value }))}
+                        placeholder="https://your-deployed-app.com"
+                        className="w-full p-3 pr-12 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      />
+                      <button
+                        onClick={() => handleCopyToClipboard(projectData.deploymentUrl, 'deploymentUrl')}
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 p-2 hover:bg-gray-100 rounded"
+                        title="Copy Deployment URL"
+                      >
+                        {copiedField === 'deploymentUrl' ? (
+                          <CheckCircle className="text-green-500" size={20} />
+                        ) : (
+                          <Copy className="text-gray-500" size={20} />
+                        )}
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      If your repository is deployed, provide the live URL
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* File Upload Section (shown when files method is selected) */}
+              {projectData.uploadMethod === 'files' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Upload Project Files
+                  </label>
+                  <div
+                    {...getRootProps()}
+                    className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+                      isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                  >
+                    <input {...getInputProps()} />
+                    {isDragActive ? (
+                      <p className="text-blue-500">Drop your project files here...</p>
+                    ) : (
+                      <>
+                        <Upload className="mx-auto mb-4 text-gray-400" size={48} />
+                        <p className="text-lg mb-2">
+                          Drag & drop your project files here, or click to select
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Supports all major programming languages
+                        </p>
+                      </>
+                    )}
+                  </div>
+
+                  {projectData.files.length > 0 && (
+                    <div className="mt-4">
+                      <h4 className="font-medium mb-2">Uploaded Files ({projectData.files.length})</h4>
+                      <div className="space-y-2">
+                        {projectData.files.map((file, index) => (
+                          <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                            <span className="text-sm">{file.name}</span>
+                            <button
+                              onClick={() => removeFile(index)}
+                              className="text-red-500 hover:text-red-700"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
-
-                {projectData.files.length > 0 && (
-                  <div className="mt-4">
-                    <h4 className="font-medium mb-2">Uploaded Files ({projectData.files.length})</h4>
-                    <div className="space-y-2">
-                      {projectData.files.map((file, index) => (
-                        <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                          <span className="text-sm">{file.name}</span>
-                          <button
-                            onClick={() => removeFile(index)}
-                            className="text-red-500 hover:text-red-700"
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
+              )}
 
               <button
                 onClick={handleProjectUpload}
-                disabled={isProcessing || !projectData.name}
+                disabled={isProcessing || !projectData.name || 
+                  (projectData.uploadMethod === 'url' && !projectData.appUrl) ||
+                  (projectData.uploadMethod === 'github' && !projectData.githubRepo) ||
+                  (projectData.uploadMethod === 'files' && projectData.files.length === 0)}
                 className="w-full bg-blue-500 text-white py-3 px-6 rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
                 {isProcessing ? (
                   'Processing...'
                 ) : (
                   <>
-                    Upload Project <ArrowRight className="ml-2" size={16} />
+                    {projectData.uploadMethod === 'url' ? 'Import from URL' :
+                     projectData.uploadMethod === 'github' ? 'Import from GitHub' :
+                     'Upload Project'} <ArrowRight className="ml-2" size={16} />
                   </>
                 )}
               </button>
