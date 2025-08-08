@@ -1,0 +1,12 @@
+node_modules
+.env.local
+.env.example
+*.log
+.DS_Store
+server.pid
+frontend.pid
+system.pid
+debug-migration.*
+full-system.log
+server.log
+frontend.log
