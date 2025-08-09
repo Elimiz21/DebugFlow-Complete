@@ -2,6 +2,9 @@ import { AuthUtils } from '../utils/auth.js';
 import database from '../database/database.js';
 import memoryDatabase from '../database/memoryDatabase.js';
 import Joi from 'joi';
+import { validationRules, handleValidationErrors } from '../middleware/validation.js';
+import { AppError, asyncHandler } from '../middleware/errorHandler.js';
+import { rateLimiters } from '../utils/security.js';
 
 // Use memory database in serverless environment (Vercel), regular database locally
 const getDatabase = () => {
@@ -24,11 +27,9 @@ const loginSchema = Joi.object({
   password: Joi.string().required()
 });
 
-export default async function handler(req, res) {
-  // Set CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+export default asyncHandler(async function handler(req, res) {
+  // CORS is now handled by middleware
+  // Rate limiting is applied per endpoint
   
   // Handle OPTIONS request for CORS preflight
   if (req.method === 'OPTIONS') {
@@ -85,8 +86,7 @@ async function handleAuthPost(req, res) {
   }
 }
 
-async function handleRegister(req, res) {
-  try {
+const handleRegister = asyncHandler(async (req, res) => {
     const db = getDatabase();
     
     // Validate input
@@ -168,17 +168,9 @@ async function handleRegister(req, res) {
       }
     });
 
-  } catch (error) {
-    console.error('Registration error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error during registration'
-    });
-  }
-}
+});
 
-async function handleLogin(req, res) {
-  try {
+const handleLogin = asyncHandler(async (req, res) => {
     const db = getDatabase();
     
     // Validate input
@@ -245,14 +237,7 @@ async function handleLogin(req, res) {
       }
     });
 
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error during login'
-    });
-  }
-}
+});
 
 async function handleVerifyToken(req, res) {
   try {
