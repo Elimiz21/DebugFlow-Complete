@@ -2,6 +2,7 @@ import sqlite3 from 'sqlite3';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import fs from 'fs';
+import supabaseDb from '../utils/supabase.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -12,6 +13,24 @@ class Database {
   }
 
   async initialize() {
+    // Try Supabase first in production
+    if (process.env.NODE_ENV === 'production' || process.env.SUPABASE_URL) {
+      try {
+        const initialized = await supabaseDb.initialize();
+        if (initialized) {
+          console.log('Connected to Supabase database');
+          this.db = supabaseDb; // Use Supabase as database
+          return;
+        }
+      } catch (error) {
+        console.error('Supabase initialization failed:', error);
+        if (process.env.NODE_ENV === 'production') {
+          throw error;
+        }
+      }
+    }
+
+    // Fallback to SQLite for development
     return new Promise((resolve, reject) => {
       // Create database directory if it doesn't exist
       const dbDir = join(__dirname, '../data');
@@ -138,6 +157,11 @@ class Database {
 
   // User methods
   async createUser(userData) {
+    // Use Supabase if available
+    if (this.db === supabaseDb) {
+      return supabaseDb.createUser(userData);
+    }
+    
     const sql = `
       INSERT INTO users (email, name, password_hash, company, timezone)
       VALUES (?, ?, ?, ?, ?)
@@ -153,12 +177,22 @@ class Database {
   }
 
   async getUserByEmail(email) {
+    // Use Supabase if available
+    if (this.db === supabaseDb) {
+      return supabaseDb.getUserByEmail(email);
+    }
+    
     const sql = 'SELECT * FROM users WHERE email = ?';
     const rows = await this.query(sql, [email]);
     return rows[0] || null;
   }
 
   async getUserById(id) {
+    // Use Supabase if available
+    if (this.db === supabaseDb) {
+      return supabaseDb.getUserById(id);
+    }
+    
     const sql = 'SELECT * FROM users WHERE id = ?';
     const rows = await this.query(sql, [id]);
     return rows[0] || null;
@@ -166,6 +200,11 @@ class Database {
 
   // Project methods
   async createProject(projectData) {
+    // Use Supabase if available
+    if (this.db === supabaseDb) {
+      return supabaseDb.createProject(projectData);
+    }
+    
     const sql = `
       INSERT INTO projects (id, user_id, name, description, type, language, codebase_url, deployment_url)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -184,17 +223,32 @@ class Database {
   }
 
   async getProjectsByUserId(userId) {
+    // Use Supabase if available
+    if (this.db === supabaseDb) {
+      return supabaseDb.getProjectsByUserId(userId);
+    }
+    
     const sql = 'SELECT * FROM projects WHERE user_id = ? ORDER BY updated_at DESC';
     return this.query(sql, [userId]);
   }
 
   async getProjectById(id) {
+    // Use Supabase if available
+    if (this.db === supabaseDb) {
+      return supabaseDb.getProjectById(id);
+    }
+    
     const sql = 'SELECT * FROM projects WHERE id = ?';
     const rows = await this.query(sql, [id]);
     return rows[0] || null;
   }
 
   async updateProject(id, updates) {
+    // Use Supabase if available
+    if (this.db === supabaseDb) {
+      return supabaseDb.updateProject(id, updates);
+    }
+    
     const fields = Object.keys(updates);
     const values = Object.values(updates);
     const setClause = fields.map(field => `${field} = ?`).join(', ');

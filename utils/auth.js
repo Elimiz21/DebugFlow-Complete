@@ -2,8 +2,10 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 
-// JWT secret - in production this should be in environment variables
-const JWT_SECRET = process.env.JWT_SECRET || 'debugflow-dev-secret-change-in-production';
+// JWT secret - must be provided via environment variable in production
+const JWT_SECRET = process.env.JWT_SECRET || (process.env.NODE_ENV === 'production' 
+  ? (() => { throw new Error('JWT_SECRET must be set in production environment'); })() 
+  : 'debugflow-dev-secret-only-for-development');
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
 
 export class AuthUtils {

@@ -4,6 +4,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import crypto from 'crypto';
+import cloudinaryHelpers, { createCloudinaryUploader, isCloudinaryConfigured } from './cloudinary.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -29,6 +30,18 @@ export class FileUploadUtils {
 
   // Configure multer storage
   static createMulterStorage() {
+    // Use Cloudinary if configured, otherwise fallback to disk storage
+    if (isCloudinaryConfigured()) {
+      // Cloudinary storage is handled by createCloudinaryUploader
+      return null;
+    }
+    
+    // Fallback to disk storage for development
+    if (process.env.NODE_ENV === 'production') {
+      // In production without Cloudinary, use memory storage
+      return multer.memoryStorage();
+    }
+    
     return multer.diskStorage({
       destination: (req, file, cb) => {
         const projectId = req.body.projectId || req.query.projectId || 'temp';
@@ -297,6 +310,67 @@ export class FileUploadUtils {
   // Generate file hash for deduplication
   static generateFileHash(content) {
     return crypto.createHash('sha256').update(content).digest('hex');
+  }
+  // Create upload middleware with Cloudinary support
+  static createUploadMiddleware() {
+    // Use Cloudinary if configured
+    if (isCloudinaryConfigured()) {
+      return createCloudinaryUploader({
+        fileFilter: this.fileFilter,
+        limits: {
+          fileSize: 10 * 1024 * 1024, // 10MB per file
+          files: 50 // Maximum 50 files
+        }
+      });
+    }
+    
+    // Fallback to local storage
+    const storage = this.createMulterStorage();
+    return multer({
+      storage,
+      fileFilter: this.fileFilter,
+      limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB per file
+        files: 50 // Maximum 50 files
+      }
+    });
+  }
+
+  // Upload file content to Cloudinary
+  static async uploadToCloudinary(filename, content, projectId) {
+    if (!isCloudinaryConfigured()) {
+      return null;
+    }
+    
+    try {
+      const result = await cloudinaryHelpers.uploadText(content, filename, {
+        folder: `debugflow/projects/${projectId}`,
+        publicId: `${Date.now()}-${filename.replace(/\.[^/.]+$/, '')}`
+      });
+      return result;
+    } catch (error) {
+      console.error('Error uploading to Cloudinary:', error);
+      return null;
+    }
+  }
+
+  // Delete project files from Cloudinary
+  static async deleteProjectFiles(projectId) {
+    if (!isCloudinaryConfigured()) {
+      return false;
+    }
+    
+    try {
+      const files = await cloudinaryHelpers.listFiles(`debugflow/projects/${projectId}`);
+      const publicIds = files.map(file => file.publicId);
+      if (publicIds.length > 0) {
+        await cloudinaryHelpers.deleteFiles(publicIds);
+      }
+      return true;
+    } catch (error) {
+      console.error('Error deleting project files from Cloudinary:', error);
+      return false;
+    }
   }
 }
 

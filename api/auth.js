@@ -100,8 +100,8 @@ async function handleRegister(req, res) {
 
     const { name, email, password, company, timezone } = value;
 
-    // Mock registration for development/demo
-    if (email && password) {
+    // Mock registration for development/demo only
+    if (process.env.NODE_ENV !== 'production' && email && password) {
       const mockUser = {
         id: 1,
         name: name,
@@ -192,8 +192,8 @@ async function handleLogin(req, res) {
 
     const { email, password } = value;
 
-    // Mock authentication for development/demo - accept any valid email/password
-    if (email && password) {
+    // Mock authentication for development/demo only
+    if (process.env.NODE_ENV !== 'production' && email && password) {
       const mockUser = {
         id: 1,
         name: email.split('@')[0],
@@ -266,8 +266,8 @@ async function handleVerifyToken(req, res) {
       });
     }
 
-    // Mock token verification
-    if (token === 'mock-jwt-token-for-development') {
+    // Mock token verification for development only
+    if (process.env.NODE_ENV !== 'production' && token === 'mock-jwt-token-for-development') {
       return res.status(200).json({
         success: true,
         message: 'Token valid',

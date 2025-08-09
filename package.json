@@ -11,11 +11,13 @@
     "dev:full": "concurrently \"npm run dev\" \"npm run socket-server\""
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.54.0",
     "@vitejs/plugin-react": "^4.0.0",
     "autoprefixer": "^10.4.0",
     "axios": "^1.4.0",
     "bcryptjs": "^2.4.3",
     "chart.js": "^4.5.0",
+    "cloudinary": "^1.41.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.19.2",
@@ -25,6 +27,7 @@
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.259.0",
     "multer": "^1.4.5-lts.1",
+    "multer-storage-cloudinary": "^4.0.0",
     "openai": "^5.12.0",
     "postcss": "^8.4.0",
     "react": "^18.0.0",
