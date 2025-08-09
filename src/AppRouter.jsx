@@ -19,8 +19,8 @@ const ProtectedRoute = ({ children }) => {
   const isAuthenticated = localStorage.getItem('debugflow_token');
   
   if (!isAuthenticated) {
-    // Redirect to landing page for unauthenticated users
-    return <Navigate to="/" replace />;
+    // Redirect to login page for unauthenticated users
+    return <Navigate to="/login" replace />;
   }
   
   return children;
