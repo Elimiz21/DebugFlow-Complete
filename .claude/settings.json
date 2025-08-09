@@ -4,5 +4,18 @@
       "allow all"
     ],
     "deny": []
+  },
+  "git": {
+    "autoCommit": false,
+    "autoPush": true,
+    "commitMessage": {
+      "includeCoAuthor": true,
+      "includeGeneratedBy": true
+    }
+  },
+  "workflow": {
+    "autoCommitAfterApproval": true,
+    "confirmBeforePush": false,
+    "defaultBranch": "main"
   }
 }
