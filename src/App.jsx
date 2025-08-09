@@ -23,7 +23,8 @@ function AppContent({ initialTab = 'dashboard' }) {
   const [currentTab, setCurrentTab] = useState(initialTab);
   const [isConnected, setIsConnected] = useState(false);
   const [user, setUser] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Start with checking if token exists to avoid flash of null content
+  const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('debugflow_token'));
   const { projects } = useProjectContext();
 
   // Check authentication on app load
@@ -35,48 +36,53 @@ function AppContent({ initialTab = 'dashboard' }) {
         return;
       }
 
-      // In development, just check if we have a mock token
-      if (import.meta.env.DEV) {
-        if (token === 'mock-jwt-token-for-development') {
-          setIsAuthenticated(true);
-          const savedUser = localStorage.getItem('debugflow_user');
-          if (savedUser) {
-            setUser(JSON.parse(savedUser));
-          } else {
-            setUser({ id: 1, name: 'Test User', email: 'test@debugflow.com' });
-          }
+      // Always accept the mock token if it exists
+      if (token === 'mock-jwt-token-for-development') {
+        setIsAuthenticated(true);
+        const savedUser = localStorage.getItem('debugflow_user');
+        if (savedUser) {
+          setUser(JSON.parse(savedUser));
         } else {
-          setIsAuthenticated(false);
+          setUser({ id: 1, name: 'Test User', email: 'test@debugflow.com' });
         }
         return;
       }
 
-      try {
-        const response = await fetch('/api/auth?action=verify-token', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
+      // For production, verify with backend
+      if (!import.meta.env.DEV) {
+        try {
+          const response = await fetch('/api/auth?action=verify-token', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
 
-        const result = await response.json();
-        
-        if (result.success) {
-          setIsAuthenticated(true);
-          setUser(result.data.user);
-        } else {
+          const result = await response.json();
+          
+          if (result.success) {
+            setIsAuthenticated(true);
+            setUser(result.data.user);
+          } else {
+            localStorage.removeItem('debugflow_token');
+            setIsAuthenticated(false);
+            setUser(null);
+          }
+        } catch (error) {
+          console.error('Auth check failed:', error);
           localStorage.removeItem('debugflow_token');
           setIsAuthenticated(false);
           setUser(null);
         }
-      } catch (error) {
-        console.error('Auth check failed:', error);
-        // In development, don't remove token on error
-        if (!import.meta.env.DEV) {
-          localStorage.removeItem('debugflow_token');
+      } else {
+        // In development, any token is valid
+        setIsAuthenticated(true);
+        const savedUser = localStorage.getItem('debugflow_user');
+        if (savedUser) {
+          setUser(JSON.parse(savedUser));
+        } else {
+          setUser({ id: 1, name: 'Test User', email: 'test@debugflow.com' });
         }
-        setIsAuthenticated(false);
-        setUser(null);
       }
     };
 
