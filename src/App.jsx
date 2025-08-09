@@ -25,6 +25,7 @@ function AppContent({ initialTab = 'dashboard' }) {
   const [user, setUser] = useState(null);
   // Start with checking if token exists to avoid flash of null content
   const [isAuthenticated, setIsAuthenticated] = useState(!!localStorage.getItem('debugflow_token'));
+  const [isLoading, setIsLoading] = useState(true);
   const { projects } = useProjectContext();
 
   // Check authentication on app load
@@ -33,6 +34,7 @@ function AppContent({ initialTab = 'dashboard' }) {
       const token = localStorage.getItem('debugflow_token');
       if (!token) {
         setIsAuthenticated(false);
+        setIsLoading(false);
         return;
       }
 
@@ -45,6 +47,7 @@ function AppContent({ initialTab = 'dashboard' }) {
         } else {
           setUser({ id: 1, name: 'Test User', email: 'test@debugflow.com' });
         }
+        setIsLoading(false);
         return;
       }
 
@@ -84,6 +87,7 @@ function AppContent({ initialTab = 'dashboard' }) {
           setUser({ id: 1, name: 'Test User', email: 'test@debugflow.com' });
         }
       }
+      setIsLoading(false);
     };
 
     checkAuth();
@@ -124,7 +128,19 @@ function AppContent({ initialTab = 'dashboard' }) {
     }
   };
 
-  // If not authenticated, don't render anything (ProtectedRoute will handle redirect)
+  // Show loading spinner while checking auth
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // If not authenticated after loading, don't render (ProtectedRoute will redirect)
   if (!isAuthenticated) {
     return null;
   }
