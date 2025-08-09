@@ -3,6 +3,7 @@ import { FileUploadUtils, multipleFilesUpload } from '../utils/fileUpload.js';
 import database from '../database/database.js';
 import { v4 as uuidv4 } from 'uuid';
 import Joi from 'joi';
+import GitHubService from '../utils/github.js';
 
 // Validation schemas
 const uploadSchema = Joi.object({
@@ -326,27 +327,65 @@ async function processUrlImportInBackground(projectId, uploadMethod, sourceUrl, 
   try {
     console.log(`Starting ${uploadMethod} import for project ${projectId} from ${sourceUrl}`);
     
-    // For now, we'll create placeholder data
-    // In a real implementation, you would:
-    // 1. For GitHub: Use GitHub API to clone/download the repository
-    // 2. For URL: Scrape the website or use web scraping tools
+    let importedData = null;
+    let files = [];
     
-    const mockFiles = [
-      {
-        filename: 'README.md',
-        content: `# Imported Project\n\nThis project was imported from ${sourceUrl}\n\nImport Method: ${uploadMethod}\n${deploymentUrl ? `\nDeployment URL: ${deploymentUrl}` : ''}`,
-        language: 'Markdown',
-        size_bytes: 200
+    if (uploadMethod === 'github') {
+      // Use real GitHub API
+      const githubService = new GitHubService(process.env.GITHUB_TOKEN);
+      
+      try {
+        importedData = await githubService.importRepository(sourceUrl, {
+          maxFiles: 100 // Limit to 100 files for now
+        });
+        
+        files = importedData.files.map(file => ({
+          filename: file.filename,
+          filepath: file.path,
+          content: file.content,
+          language: FileUploadUtils.detectLanguage(file.filename),
+          size_bytes: file.size
+        }));
+        
+        // Update project with GitHub repository info
+        await database.updateProject(projectId, {
+          status: 'completed',
+          file_count: files.length,
+          size_bytes: files.reduce((sum, f) => sum + f.size_bytes, 0),
+          language: Object.keys(importedData.languages)[0] || 'Multiple',
+          github_repo: importedData.repository.url,
+          description: importedData.repository.description || `Imported from ${importedData.repository.fullName}`
+        });
+        
+      } catch (githubError) {
+        console.error('GitHub import error:', githubError);
+        
+        // Update project status to failed
+        await database.updateProject(projectId, {
+          status: 'failed',
+          error_message: githubError.message
+        });
+        
+        return;
       }
-    ];
-    
-    // Update project with import results
-    await database.updateProject(projectId, {
-      status: 'completed',
-      file_count: mockFiles.length,
-      size_bytes: mockFiles.reduce((sum, f) => sum + f.size_bytes, 0),
-      language: uploadMethod === 'github' ? 'Repository' : 'Web App'
-    });
+    } else {
+      // For URL imports, create a placeholder
+      files = [
+        {
+          filename: 'README.md',
+          content: `# Imported Project\n\nThis project was imported from ${sourceUrl}\n\nImport Method: ${uploadMethod}\n${deploymentUrl ? `\nDeployment URL: ${deploymentUrl}` : ''}`,
+          language: 'Markdown',
+          size_bytes: 200
+        }
+      ];
+      
+      await database.updateProject(projectId, {
+        status: 'completed',
+        file_count: files.length,
+        size_bytes: files.reduce((sum, f) => sum + f.size_bytes, 0),
+        language: 'Web App'
+      });
+    }
     
     // Store imported files
     for (const file of mockFiles) {
