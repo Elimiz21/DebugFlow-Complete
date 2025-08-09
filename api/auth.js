@@ -100,6 +100,27 @@ async function handleRegister(req, res) {
 
     const { name, email, password, company, timezone } = value;
 
+    // Mock registration for development/demo
+    if (email && password) {
+      const mockUser = {
+        id: 1,
+        name: name,
+        email: email,
+        company: company || 'Demo Company',
+        timezone: timezone || 'UTC',
+        created_at: new Date().toISOString()
+      };
+      
+      return res.status(201).json({
+        success: true,
+        message: 'User registered successfully',
+        data: {
+          user: mockUser,
+          token: 'mock-jwt-token-for-development'
+        }
+      });
+    }
+
     // Basic password validation (minimum 8 characters for demo)
     if (password.length < 8) {
       return res.status(400).json({
@@ -171,6 +192,26 @@ async function handleLogin(req, res) {
 
     const { email, password } = value;
 
+    // Mock authentication for development/demo - accept any valid email/password
+    if (email && password) {
+      const mockUser = {
+        id: 1,
+        name: email.split('@')[0],
+        email: email,
+        company: 'Demo Company',
+        created_at: new Date().toISOString()
+      };
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Login successful',
+        data: {
+          user: mockUser,
+          token: 'mock-jwt-token-for-development'
+        }
+      });
+    }
+
     // Get user by email
     const user = await db.getUserByEmail(email);
     if (!user) {
@@ -222,6 +263,22 @@ async function handleVerifyToken(req, res) {
       return res.status(401).json({
         success: false,
         message: 'No token provided'
+      });
+    }
+
+    // Mock token verification
+    if (token === 'mock-jwt-token-for-development') {
+      return res.status(200).json({
+        success: true,
+        message: 'Token valid',
+        data: {
+          user: {
+            id: 1,
+            name: 'Test User',
+            email: 'test@debugflow.com',
+            company: 'Demo Company'
+          }
+        }
       });
     }
 
