@@ -56,62 +56,7 @@ const UploadProject = () => {
         return;
       }
 
-      // In development, use mock upload
-      if (import.meta.env.DEV) {
-        // Simulate upload delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Create mock project based on upload method
-        const mockProject = {
-          id: Date.now().toString(),
-          name: projectData.name || 'New Project',
-          type: projectType === 'app' ? 'web-app' : projectType === 'files' ? 'script' : 'library',
-          language: projectData.uploadMethod === 'github' ? 'Repository' : 'JavaScript',
-          status: 'analyzing',
-          created_at: new Date().toISOString(),
-          file_count: projectData.uploadMethod === 'files' ? projectData.files.length : 0,
-          bugs_found: 0,
-          sourceUrl: projectData.githubRepo || projectData.appUrl || null,
-          uploadMethod: projectData.uploadMethod
-        };
-        
-        // Add project to context
-        addProject(mockProject);
-        
-        // Show success message
-        const successMessage = projectData.uploadMethod === 'github' 
-          ? `GitHub repository "${projectData.name}" imported successfully!`
-          : projectData.uploadMethod === 'url'
-          ? `Web app "${projectData.name}" imported successfully!`
-          : `Project "${projectData.name}" uploaded successfully!`;
-          
-        toast.success(successMessage);
-        
-        if (projectData.uploadMethod !== 'files') {
-          setTimeout(() => {
-            toast('Import is being processed in the background', { icon: '⚙️' });
-          }, 500);
-        }
-        
-        // Reset form
-        setCurrentStep('project-type');
-        setProjectType(null);
-        setProjectData({
-          name: '',
-          description: '',
-          files: [],
-          codebaseUrl: '',
-          accessType: 'read-only',
-          githubRepo: '',
-          deploymentUrl: '',
-          appUrl: '',
-          uploadMethod: 'files'
-        });
-        
-        return;
-      }
-
-      // Production code - prepare form data for real API
+      // Prepare form data
       const formData = new FormData();
       formData.append('projectName', projectData.name || 'New Project');
       formData.append('projectDescription', projectData.description || '');

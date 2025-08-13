@@ -35,22 +35,6 @@ function AppContent({ initialTab = 'dashboard' }) {
         return;
       }
 
-      // In development, just check if we have a mock token
-      if (import.meta.env.DEV) {
-        if (token === 'mock-jwt-token-for-development') {
-          setIsAuthenticated(true);
-          const savedUser = localStorage.getItem('debugflow_user');
-          if (savedUser) {
-            setUser(JSON.parse(savedUser));
-          } else {
-            setUser({ id: 1, name: 'Test User', email: 'test@debugflow.com' });
-          }
-        } else {
-          setIsAuthenticated(false);
-        }
-        return;
-      }
-
       try {
         const response = await fetch('/api/auth?action=verify-token', {
           method: 'POST',
@@ -71,10 +55,7 @@ function AppContent({ initialTab = 'dashboard' }) {
         }
       } catch (error) {
         console.error('Auth check failed:', error);
-        // In development, don't remove token on error
-        if (!import.meta.env.DEV) {
-          localStorage.removeItem('debugflow_token');
-        }
+        localStorage.removeItem('debugflow_token');
         setIsAuthenticated(false);
         setUser(null);
       }

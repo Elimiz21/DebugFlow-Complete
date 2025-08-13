@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../services/api.js';
-import { mockAuth } from '../services/mockAuth.js';
 import MetaTags from '../components/SEO/MetaTags.jsx';
 
 const Login = () => {
@@ -32,35 +31,25 @@ const Login = () => {
     setError('');
 
     try {
-      // Check if we're in development mode
-      const isDevelopment = import.meta.env.DEV;
+      const action = isLogin ? 'login' : 'register';
+      const endpoint = `/auth?action=${action}`;
       
-      let response;
-      
-      // Always use mock authentication for now since backend isn't running
-      console.log('Using mock authentication');
-      if (isLogin) {
-        response = await mockAuth.login(formData.email, formData.password);
-      } else {
-        response = await mockAuth.register(formData);
-      }
-      response = { data: response }; // Wrap to match API response structure
+      const payload = isLogin 
+        ? { email: formData.email, password: formData.password }
+        : formData;
+
+      const response = await api.post(endpoint, payload);
 
       if (response.data.success) {
         // Store the token
         localStorage.setItem('debugflow_token', response.data.data.token);
-        
-        // Store user data for development
-        if (isDevelopment) {
-          localStorage.setItem('debugflow_user', JSON.stringify(response.data.data.user));
-        }
         
         // Navigate to dashboard
         navigate('/dashboard');
       }
     } catch (err) {
       console.error('Auth error:', err);
-      setError(err.response?.data?.message || err.message || 'Authentication failed. Please try again.');
+      setError(err.response?.data?.message || 'Authentication failed. Please try again.');
     } finally {
       setLoading(false);
     }
