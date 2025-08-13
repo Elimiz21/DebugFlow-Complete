@@ -1,7 +1,15 @@
 import { AuthUtils, authenticateToken } from '../utils/auth.js';
 import database from '../database/database.js';
+import memoryDatabase from '../database/memoryDatabase.js';
 import Joi from 'joi';
 import { v4 as uuidv4 } from 'uuid';
+
+// Use memory database in serverless environment (Vercel), regular database locally
+const getDatabase = () => {
+  // Check if we're in Vercel serverless environment
+  const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+  return isServerless ? memoryDatabase : database;
+};
 
 // Validation schemas
 const createProjectSchema = Joi.object({
@@ -26,15 +34,16 @@ export default async function handler(req, res) {
   }
 
   // Initialize database connection
-  if (!database.db) {
-    try {
-      await database.initialize();
-    } catch (error) {
-      return res.status(500).json({
-        success: false,
-        message: 'Database initialization failed'
-      });
-    }
+  const db = getDatabase();
+  try {
+    await db.initialize();
+  } catch (error) {
+    console.error('Database initialization error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Database initialization failed',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 
   const { method } = req;
@@ -84,7 +93,8 @@ async function handleGetProjects(req, res) {
     
     if (id) {
       // Get specific project
-      const project = await database.getProjectById(id);
+      const db = getDatabase();
+    const project = await db.getProjectById(id);
       
       if (!project) {
         return res.status(404).json({
@@ -107,7 +117,8 @@ async function handleGetProjects(req, res) {
       });
     } else {
       // Get all projects for user
-      const projects = await database.getProjectsByUserId(req.user.id);
+      const db = getDatabase();
+    const projects = await db.getProjectsByUserId(req.user.id);
       
       return res.status(200).json({
         success: true,
@@ -147,10 +158,12 @@ async function handleCreateProject(req, res) {
     };
 
     // Save to database
-    await database.createProject(projectData);
+    const db = getDatabase();
+  await db.createProject(projectData);
 
     // Fetch the created project
-    const project = await database.getProjectById(projectId);
+    const db = getDatabase();
+    const project = await db.getProjectById(projectId);
 
     res.status(201).json({
       success: true,
@@ -179,7 +192,8 @@ async function handleUpdateProject(req, res) {
     }
 
     // Check if project exists and user owns it
-    const existingProject = await database.getProjectById(id);
+    const db = getDatabase();
+    const existingProject = await db.getProjectById(id);
     if (!existingProject) {
       return res.status(404).json({
         success: false,
@@ -212,10 +226,12 @@ async function handleUpdateProject(req, res) {
     }
 
     // Update project
-    await database.updateProject(id, updates);
+    const db = getDatabase();
+  await db.updateProject(id, updates);
 
     // Fetch updated project
-    const project = await database.getProjectById(id);
+    const db = getDatabase();
+    const project = await db.getProjectById(id);
 
     res.status(200).json({
       success: true,
@@ -244,7 +260,8 @@ async function handleDeleteProject(req, res) {
     }
 
     // Check if project exists and user owns it
-    const project = await database.getProjectById(id);
+    const db = getDatabase();
+    const project = await db.getProjectById(id);
     if (!project) {
       return res.status(404).json({
         success: false,
@@ -260,7 +277,8 @@ async function handleDeleteProject(req, res) {
     }
 
     // Delete project (CASCADE will handle related records)
-    await database.run('DELETE FROM projects WHERE id = ?', [id]);
+    const db = getDatabase();
+  await db.run('DELETE FROM projects WHERE id = ?', [id]);
 
     res.status(200).json({
       success: true,

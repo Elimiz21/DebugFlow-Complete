@@ -1,8 +1,16 @@
 import { AuthUtils } from '../utils/auth.js';
 import { FileUploadUtils, multipleFilesUpload } from '../utils/fileUpload.js';
 import database from '../database/database.js';
+import memoryDatabase from '../database/memoryDatabase.js';
 import { v4 as uuidv4 } from 'uuid';
 import Joi from 'joi';
+
+// Use memory database in serverless environment (Vercel), regular database locally
+const getDatabase = () => {
+  // Check if we're in Vercel serverless environment
+  const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
+  return isServerless ? memoryDatabase : database;
+};
 
 // Validation schemas
 const uploadSchema = Joi.object({
@@ -17,16 +25,28 @@ const uploadSchema = Joi.object({
 });
 
 export default async function handler(req, res) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  
+  // Handle OPTIONS request for CORS preflight
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
   // Initialize database connection
-  if (!database.db) {
-    try {
-      await database.initialize();
-    } catch (error) {
-      return res.status(500).json({
-        success: false,
-        message: 'Database initialization failed'
-      });
-    }
+  const db = getDatabase();
+  try {
+    await db.initialize();
+  } catch (error) {
+    console.error('Database initialization error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Database initialization failed',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
 
   const { method } = req;
@@ -145,6 +165,7 @@ async function handleFileUpload(req, res, user) {
     const primaryLanguage = languages.length > 0 ? languages[0] : 'Mixed';
 
     // Create project in database
+    const db = getDatabase();
     const projectData = {
       id: projectId,
       user_id: user.id,
@@ -159,11 +180,12 @@ async function handleFileUpload(req, res, user) {
       status: 'analyzing'
     };
 
-    await database.createProject(projectData);
+    await db.createProject(projectData);
 
     // Save files to database
+    const db = getDatabase();
     for (const file of processedFiles) {
-      await database.createProjectFile({
+      await db.createProjectFile({
         project_id: projectId,
         filename: file.filename,
         filepath: file.filepath,
@@ -235,6 +257,7 @@ async function handleUrlImport(req, res, user, data) {
     }
     
     // Create project in database with URL reference
+    const db = getDatabase();
     const projectData = {
       id: projectId,
       user_id: user.id,
@@ -249,10 +272,10 @@ async function handleUrlImport(req, res, user, data) {
       status: 'importing'
     };
     
-    await database.createProject(projectData);
+    await db.createProject(projectData);
     
     // Store import metadata
-    await database.createProjectFile({
+    await db.createProjectFile({
       project_id: projectId,
       filename: '_import_metadata.json',
       filepath: '/',
@@ -268,10 +291,27 @@ async function handleUrlImport(req, res, user, data) {
       language: 'JSON'
     });
     
-    // Start background import process (fire and forget)
-    setImmediate(() => {
-      processUrlImportInBackground(projectId, uploadMethod, sourceUrl, deploymentUrl);
-    });
+    // In serverless, we can't do background processing, so mark as ready
+    // In a real implementation, you would trigger a separate serverless function or use a queue
+    if (process.env.VERCEL) {
+      // Immediately mark as ready for demo purposes
+      setTimeout(async () => {
+        try {
+          await db.updateProject(projectId, {
+            status: 'ready',
+            file_count: 1,
+            language: uploadMethod === 'github' ? 'Repository' : 'Web App'
+          });
+        } catch (err) {
+          console.error('Failed to update project status:', err);
+        }
+      }, 100);
+    } else {
+      // Start background import process (fire and forget)
+      setImmediate(() => {
+        processUrlImportInBackground(projectId, uploadMethod, sourceUrl, deploymentUrl);
+      });
+    }
     
     // Prepare response
     const response = {
@@ -311,6 +351,8 @@ async function processUrlImportInBackground(projectId, uploadMethod, sourceUrl, 
   try {
     console.log(`Starting ${uploadMethod} import for project ${projectId} from ${sourceUrl}`);
     
+    const db = getDatabase();
+    
     // For now, we'll create placeholder data
     // In a real implementation, you would:
     // 1. For GitHub: Use GitHub API to clone/download the repository
@@ -326,7 +368,7 @@ async function processUrlImportInBackground(projectId, uploadMethod, sourceUrl, 
     ];
     
     // Update project with import results
-    await database.updateProject(projectId, {
+    await db.updateProject(projectId, {
       status: 'completed',
       file_count: mockFiles.length,
       size_bytes: mockFiles.reduce((sum, f) => sum + f.size_bytes, 0),
@@ -335,7 +377,7 @@ async function processUrlImportInBackground(projectId, uploadMethod, sourceUrl, 
     
     // Store imported files
     for (const file of mockFiles) {
-      await database.createProjectFile({
+      await db.createProjectFile({
         project_id: projectId,
         filename: file.filename,
         filepath: '/',
@@ -350,9 +392,10 @@ async function processUrlImportInBackground(projectId, uploadMethod, sourceUrl, 
   } catch (error) {
     console.error(`${uploadMethod} import failed for project ${projectId}:`, error);
     
+    const db = getDatabase();
     // Update project status to failed
     try {
-      await database.updateProject(projectId, {
+      await db.updateProject(projectId, {
         status: 'import-failed'
       });
     } catch (dbError) {
@@ -365,6 +408,8 @@ async function processUrlImportInBackground(projectId, uploadMethod, sourceUrl, 
 async function analyzeProjectInBackground(projectId, files) {
   try {
     console.log(`Starting background analysis for project ${projectId}`);
+    
+    const db = getDatabase();
     
     // Process files and detect potential issues
     let totalLinesOfCode = 0;
@@ -393,14 +438,14 @@ async function analyzeProjectInBackground(projectId, files) {
     }
 
     // Update project with analysis results
-    await database.updateProject(projectId, {
+    await db.updateProject(projectId, {
       status: potentialIssues.length > 0 ? 'issues-found' : 'completed',
       bugs_found: potentialIssues.length
     });
 
     // Store analysis results as bug reports
     for (const issue of potentialIssues.slice(0, 10)) { // Limit to 10 issues
-      await database.createBugReport({
+      await db.createBugReport({
         project_id: projectId,
         title: issue.title,
         description: issue.description,
@@ -421,9 +466,10 @@ async function analyzeProjectInBackground(projectId, files) {
   } catch (error) {
     console.error(`Background analysis failed for project ${projectId}:`, error);
     
+    const db = getDatabase();
     // Update project status to failed
     try {
-      await database.updateProject(projectId, {
+      await db.updateProject(projectId, {
         status: 'failed'
       });
     } catch (dbError) {
