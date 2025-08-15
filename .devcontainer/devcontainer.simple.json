@@ -1,0 +1,7 @@
+{
+  "name": "DebugFlow Simple Dev",
+  "image": "node:20",
+  "forwardPorts": [3000, 3001, 5173],
+  "postCreateCommand": "npm install",
+  "remoteUser": "node"
+}

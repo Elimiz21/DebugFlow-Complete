@@ -27,3 +27,6 @@ Thumbs.db
 temp/
 uploads/
 data/
+
+# Devcontainer
+.devcontainer/workspace
