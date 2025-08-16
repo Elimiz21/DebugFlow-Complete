@@ -94,7 +94,7 @@ async function handleGetProjects(req, res) {
     if (id) {
       // Get specific project
       const db = getDatabase();
-    const project = await db.getProjectById(id);
+      const project = await db.getProjectById(id);
       
       if (!project) {
         return res.status(404).json({
@@ -118,7 +118,7 @@ async function handleGetProjects(req, res) {
     } else {
       // Get all projects for user
       const db = getDatabase();
-    const projects = await db.getProjectsByUserId(req.user.id);
+      const projects = await db.getProjectsByUserId(req.user.id);
       
       return res.status(200).json({
         success: true,
@@ -159,10 +159,9 @@ async function handleCreateProject(req, res) {
 
     // Save to database
     const db = getDatabase();
-  await db.createProject(projectData);
+    await db.createProject(projectData);
 
     // Fetch the created project
-    const db = getDatabase();
     const project = await db.getProjectById(projectId);
 
     res.status(201).json({
@@ -227,10 +226,9 @@ async function handleUpdateProject(req, res) {
 
     // Update project
     const db = getDatabase();
-  await db.updateProject(id, updates);
+    await db.updateProject(id, updates);
 
     // Fetch updated project
-    const db = getDatabase();
     const project = await db.getProjectById(id);
 
     res.status(200).json({
@@ -278,7 +276,7 @@ async function handleDeleteProject(req, res) {
 
     // Delete project (CASCADE will handle related records)
     const db = getDatabase();
-  await db.run('DELETE FROM projects WHERE id = ?', [id]);
+    await db.run('DELETE FROM projects WHERE id = ?', [id]);
 
     res.status(200).json({
       success: true,

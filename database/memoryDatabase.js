@@ -8,6 +8,8 @@ class MemoryDatabase {
   constructor() {
     this.users = new Map();
     this.projects = new Map();
+    this.projectFiles = new Map();
+    this.bugReports = new Map();
     this.sessions = new Map();
     this.initialized = false;
   }
@@ -116,6 +118,65 @@ class MemoryDatabase {
     
     this.projects.set(id, updatedProject);
     return { changes: 1 };
+  }
+
+  // Project file methods
+  async createProjectFile(fileData) {
+    const fileId = uuidv4();
+    const file = {
+      id: fileId,
+      project_id: fileData.project_id,
+      filename: fileData.filename,
+      filepath: fileData.filepath,
+      content: fileData.content,
+      size_bytes: fileData.size_bytes,
+      language: fileData.language,
+      created_at: new Date().toISOString()
+    };
+    
+    this.projectFiles.set(fileId, file);
+    return { lastID: fileId };
+  }
+
+  async getProjectFiles(projectId) {
+    const files = [];
+    for (const [id, file] of this.projectFiles) {
+      if (file.project_id === projectId) {
+        files.push(file);
+      }
+    }
+    return files;
+  }
+
+  // Bug report methods
+  async createBugReport(bugData) {
+    const bugId = uuidv4();
+    const bug = {
+      id: bugId,
+      project_id: bugData.project_id,
+      title: bugData.title,
+      description: bugData.description,
+      severity: bugData.severity,
+      file_path: bugData.file_path,
+      line_number: bugData.line_number,
+      suggested_fix: bugData.suggested_fix,
+      ai_analysis: bugData.ai_analysis,
+      status: 'open',
+      created_at: new Date().toISOString()
+    };
+    
+    this.bugReports.set(bugId, bug);
+    return { lastID: bugId };
+  }
+
+  async getBugReportsByProjectId(projectId) {
+    const bugs = [];
+    for (const [id, bug] of this.bugReports) {
+      if (bug.project_id === projectId) {
+        bugs.push(bug);
+      }
+    }
+    return bugs;
   }
 
   // Generic query method for compatibility

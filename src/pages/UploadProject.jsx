@@ -56,43 +56,69 @@ const UploadProject = () => {
         return;
       }
 
-      // Prepare form data
-      const formData = new FormData();
-      formData.append('projectName', projectData.name || 'New Project');
-      formData.append('projectDescription', projectData.description || '');
-      formData.append('projectType', projectType === 'app' ? 'web-app' : projectType === 'files' ? 'script' : 'library');
-      formData.append('uploadMethod', projectData.uploadMethod);
-      
-      // Add URL/GitHub data based on upload method
-      if (projectData.uploadMethod === 'url' && projectData.appUrl) {
-        formData.append('appUrl', projectData.appUrl);
-      }
-      
-      if (projectData.uploadMethod === 'github' && projectData.githubRepo) {
-        formData.append('githubRepo', projectData.githubRepo);
-      }
-      
-      if (projectData.codebaseUrl) {
-        formData.append('codebaseUrl', projectData.codebaseUrl);
-      }
-      
-      if (projectData.deploymentUrl) {
-        formData.append('deploymentUrl', projectData.deploymentUrl);
-      }
+      let response;
 
-      // Add files only if upload method is 'files'
+      // Handle different upload methods with appropriate content types
       if (projectData.uploadMethod === 'files') {
+        // Use FormData for file uploads
+        const formData = new FormData();
+        formData.append('projectName', projectData.name || 'New Project');
+        formData.append('projectDescription', projectData.description || '');
+        formData.append('projectType', projectType === 'app' ? 'web-app' : projectType === 'files' ? 'script' : 'library');
+        formData.append('uploadMethod', projectData.uploadMethod);
+        
+        if (projectData.codebaseUrl) {
+          formData.append('codebaseUrl', projectData.codebaseUrl);
+        }
+        
+        if (projectData.deploymentUrl) {
+          formData.append('deploymentUrl', projectData.deploymentUrl);
+        }
+
+        // Add files
         projectData.files.forEach((file, index) => {
           formData.append('files', file);
         });
-      }
 
-      // Upload to backend using api service
-      const response = await api.post('/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
+        // Upload to backend using FormData
+        response = await api.post('/upload', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+      } else {
+        // Use JSON for URL/GitHub uploads
+        const uploadData = {
+          projectName: projectData.name || 'New Project',
+          projectDescription: projectData.description || '',
+          projectType: projectType === 'app' ? 'web-app' : projectType === 'files' ? 'script' : 'library',
+          uploadMethod: projectData.uploadMethod
+        };
+
+        // Add URL/GitHub data based on upload method
+        if (projectData.uploadMethod === 'url' && projectData.appUrl) {
+          uploadData.appUrl = projectData.appUrl;
         }
-      });
+        
+        if (projectData.uploadMethod === 'github' && projectData.githubRepo) {
+          uploadData.githubRepo = projectData.githubRepo;
+        }
+        
+        if (projectData.codebaseUrl) {
+          uploadData.codebaseUrl = projectData.codebaseUrl;
+        }
+        
+        if (projectData.deploymentUrl) {
+          uploadData.deploymentUrl = projectData.deploymentUrl;
+        }
+
+        // Upload to backend using JSON
+        response = await api.post('/upload', uploadData, {
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+      }
 
       const result = response.data;
 
