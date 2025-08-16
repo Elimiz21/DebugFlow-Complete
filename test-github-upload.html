@@ -3,408 +3,428 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GitHub Upload Test - DebugFlow</title>
+    <title>DebugFlow - GitHub Upload Test</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-            background: #0a0a0a;
-            color: #fff;
-        }
-        .test-container {
-            background: #1a1a1a;
-            border-radius: 8px;
-            padding: 20px;
-            margin: 20px 0;
-            border-left: 4px solid #4CAF50;
-        }
-        .test-result {
-            background: #2a2a2a;
-            border-radius: 6px;
-            padding: 15px;
-            margin: 15px 0;
-            border-left: 3px solid #666;
-        }
-        .test-result.success {
-            border-left-color: #4CAF50;
-            background: #0d2818;
-        }
-        .test-result.error {
-            border-left-color: #f44336;
-            background: #2d0a0a;
-        }
-        .test-result.pending {
-            border-left-color: #ff9800;
-            background: #2d1a0a;
-        }
-        h1 { color: #4CAF50; }
-        h2 { color: #81C784; }
-        h3 { color: #A5D6A7; }
-        button {
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 4px;
-            cursor: pointer;
-            margin: 10px 5px;
-            font-size: 16px;
-        }
-        button:hover { background: #45a049; }
-        button:disabled { 
-            background: #666; 
-            cursor: not-allowed; 
-        }
-        code {
-            background: #2a2a2a;
-            padding: 2px 6px;
-            border-radius: 3px;
-            color: #4CAF50;
-        }
-        .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #4CAF50;
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
-            display: inline-block;
-            margin-left: 10px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .input-group {
-            margin: 15px 0;
-        }
-        .input-group label {
-            display: block;
-            margin-bottom: 5px;
-            color: #ccc;
-        }
-        .input-group input {
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #555;
-            border-radius: 4px;
-            background: #2a2a2a;
-            color: #fff;
+        * {
+            margin: 0;
+            padding: 0;
             box-sizing: border-box;
         }
-        .logs {
-            background: #1a1a1a;
-            border: 1px solid #444;
-            border-radius: 4px;
-            padding: 10px;
-            max-height: 300px;
-            overflow-y: auto;
-            font-family: monospace;
-            font-size: 12px;
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border: 1px solid #e9ecef;
+        }
+        
+        .test-section h2 {
+            color: #495057;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #495057;
+            font-weight: 500;
+            font-size: 14px;
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 10px 15px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
             margin-top: 10px;
         }
-        .log-entry {
-            margin: 2px 0;
-            padding: 2px 0;
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
         }
-        .log-info { color: #81C784; }
-        .log-error { color: #f44336; }
-        .log-warn { color: #ff9800; }
-        .status-indicator {
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .response-area {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border: 1px solid #dee2e6;
+            min-height: 100px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        
+        .success {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        
+        .error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        
+        .info {
+            background: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        
+        .loading {
             display: inline-block;
-            width: 12px;
-            height: 12px;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0,0,0,.1);
             border-radius: 50%;
-            margin-right: 8px;
+            border-top-color: #667eea;
+            animation: spin 1s ease-in-out infinite;
         }
-        .status-success { background: #4CAF50; }
-        .status-error { background: #f44336; }
-        .status-pending { background: #ff9800; }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .example-repos {
+            margin-top: 10px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+        
+        .example-repo {
+            display: inline-block;
+            margin-right: 10px;
+            color: #667eea;
+            cursor: pointer;
+            text-decoration: underline;
+        }
+        
+        .example-repo:hover {
+            color: #764ba2;
+        }
     </style>
 </head>
 <body>
-    <h1>🧪 DebugFlow GitHub Upload Test Suite</h1>
+    <div class="container">
+        <h1>🐛 DebugFlow GitHub Upload Test</h1>
+        <p class="subtitle">Test the GitHub repository upload functionality</p>
+        
+        <!-- Authentication Test -->
+        <div class="test-section">
+            <h2>1️⃣ Authentication</h2>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" value="demo@debugflow.com" placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" value="demo123" placeholder="Enter your password">
+            </div>
+            <button onclick="testLogin()">Login & Get Token</button>
+            <div id="authResponse" class="response-area" style="display:none;"></div>
+        </div>
+        
+        <!-- GitHub Upload Test -->
+        <div class="test-section">
+            <h2>2️⃣ GitHub Repository Upload</h2>
+            <div class="form-group">
+                <label for="projectName">Project Name</label>
+                <input type="text" id="projectName" value="Test GitHub Project" placeholder="Enter project name">
+            </div>
+            <div class="form-group">
+                <label for="projectDescription">Description</label>
+                <input type="text" id="projectDescription" value="Testing GitHub import functionality" placeholder="Enter description">
+            </div>
+            <div class="form-group">
+                <label for="projectType">Project Type</label>
+                <select id="projectType">
+                    <option value="web-app">Web Application</option>
+                    <option value="api">API</option>
+                    <option value="script">Script</option>
+                    <option value="library">Library</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="githubRepo">GitHub Repository URL</label>
+                <input type="url" id="githubRepo" placeholder="https://github.com/username/repository" value="">
+                <div class="example-repos">
+                    Examples: 
+                    <span class="example-repo" onclick="setExampleRepo('https://github.com/facebook/react')">React</span>
+                    <span class="example-repo" onclick="setExampleRepo('https://github.com/vercel/next.js')">Next.js</span>
+                    <span class="example-repo" onclick="setExampleRepo('https://github.com/vuejs/vue')">Vue.js</span>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="deploymentUrl">Deployment URL (Optional)</label>
+                <input type="url" id="deploymentUrl" placeholder="https://example.com" value="">
+            </div>
+            <button onclick="testGitHubUpload()">Upload GitHub Repository</button>
+            <div id="uploadResponse" class="response-area" style="display:none;"></div>
+        </div>
+        
+        <!-- Check Projects -->
+        <div class="test-section">
+            <h2>3️⃣ Check Uploaded Projects</h2>
+            <button onclick="checkProjects()">Get My Projects</button>
+            <div id="projectsResponse" class="response-area" style="display:none;"></div>
+        </div>
+    </div>
     
-    <div class="test-container">
-        <h2>Production Environment Test</h2>
-        <p>Testing GitHub repository upload against live DebugFlow API</p>
-        
-        <div class="input-group">
-            <label for="testRepo">GitHub Repository URL:</label>
-            <input type="text" id="testRepo" placeholder="https://github.com/owner/repository" value="https://github.com/facebook/react">
-        </div>
-        
-        <div class="input-group">
-            <label for="projectName">Project Name:</label>
-            <input type="text" id="projectName" placeholder="My Test Project" value="React Repository Test">
-        </div>
-        
-        <button onclick="runGitHubUploadTest()" id="testBtn">Run GitHub Upload Test</button>
-        <button onclick="runAuthTest()">Test Authentication</button>
-        <button onclick="clearLogs()">Clear Logs</button>
-        <button onclick="window.open('https://debug-flow-complete-7lnj.vercel.app/upload', '_blank')">Open Live Upload Page</button>
-    </div>
-
-    <div id="test-results">
-        <!-- Test results will be populated here -->
-    </div>
-
-    <div class="test-container">
-        <h3>Test Logs</h3>
-        <div id="logs" class="logs"></div>
-    </div>
-
     <script>
-        const API_BASE = 'https://debug-flow-complete-7lnj.vercel.app/api';
-        let testResults = [];
-
-        function log(message, type = 'info') {
-            const logs = document.getElementById('logs');
-            const timestamp = new Date().toLocaleTimeString();
-            const logEntry = document.createElement('div');
-            logEntry.className = `log-entry log-${type}`;
-            logEntry.textContent = `[${timestamp}] ${message}`;
-            logs.appendChild(logEntry);
-            logs.scrollTop = logs.scrollHeight;
-            console.log(`[${type.toUpperCase()}]`, message);
+        let authToken = null;
+        const API_URL = 'https://debug-flow-complete-7lnj.vercel.app/api';
+        // const API_URL = 'http://localhost:3001/api'; // For local testing
+        
+        function setExampleRepo(url) {
+            document.getElementById('githubRepo').value = url;
         }
-
-        function clearLogs() {
-            document.getElementById('logs').innerHTML = '';
-            document.getElementById('test-results').innerHTML = '';
-        }
-
-        function createTestResult(id, title, status = 'pending') {
-            const container = document.getElementById('test-results');
-            const testDiv = document.createElement('div');
-            testDiv.id = id;
-            testDiv.className = `test-result ${status}`;
-            testDiv.innerHTML = `
-                <h3><span class="status-indicator status-${status}"></span>${title}</h3>
-                <p class="status">Status: <span class="status-text">${status}</span></p>
-                <div class="details"></div>
-            `;
-            container.appendChild(testDiv);
-            return testDiv;
-        }
-
-        function updateTestResult(id, status, details) {
-            const testDiv = document.getElementById(id);
-            if (!testDiv) return;
+        
+        async function testLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const responseDiv = document.getElementById('authResponse');
             
-            testDiv.className = `test-result ${status}`;
-            testDiv.querySelector('.status-indicator').className = `status-indicator status-${status}`;
-            testDiv.querySelector('.status-text').textContent = status;
-            
-            if (details) {
-                testDiv.querySelector('.details').innerHTML = details;
-            }
-        }
-
-        // Mock authentication for testing
-        function setupMockAuth() {
-            if (!localStorage.getItem('debugflow_token')) {
-                // Create a mock JWT token for testing
-                const mockPayload = {
-                    id: 1,
-                    email: 'demo@debugflow.com',
-                    name: 'Demo User',
-                    iat: Math.floor(Date.now() / 1000),
-                    exp: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60) // 7 days
-                };
-                
-                // Simple base64 encoding for demo (not secure, just for testing)
-                const mockToken = 'mock-jwt-' + btoa(JSON.stringify(mockPayload));
-                localStorage.setItem('debugflow_token', mockToken);
-                localStorage.setItem('debugflow_user', JSON.stringify({
-                    id: 1,
-                    name: 'Demo User',
-                    email: 'demo@debugflow.com'
-                }));
-                
-                log('Mock authentication token set up', 'info');
-            }
-        }
-
-        async function runAuthTest() {
-            const testDiv = createTestResult('auth-test', 'Authentication Test');
+            responseDiv.style.display = 'block';
+            responseDiv.className = 'response-area info';
+            responseDiv.textContent = '⏳ Authenticating...';
             
             try {
-                log('Testing authentication...', 'info');
-                setupMockAuth();
-                
-                const token = localStorage.getItem('debugflow_token');
-                log(`Using token: ${token.substring(0, 20)}...`, 'info');
-                
-                const response = await fetch(`${API_BASE}/health`, {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    updateTestResult('auth-test', 'success', `
-                        <p><strong>✅ Authentication working</strong></p>
-                        <p>API Health: ${data.status}</p>
-                        <p>Uptime: ${data.uptime}ms</p>
-                    `);
-                    log('Authentication test passed', 'info');
-                    return true;
-                } else {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-                
-            } catch (error) {
-                log(`Authentication test failed: ${error.message}`, 'error');
-                updateTestResult('auth-test', 'error', `
-                    <p><strong>❌ Authentication failed</strong></p>
-                    <p>Error: ${error.message}</p>
-                `);
-                return false;
-            }
-        }
-
-        async function runGitHubUploadTest() {
-            const testBtn = document.getElementById('testBtn');
-            testBtn.disabled = true;
-            testBtn.textContent = 'Testing...';
-            
-            const testDiv = createTestResult('github-upload-test', 'GitHub Repository Upload Test');
-            
-            try {
-                // Setup authentication
-                setupMockAuth();
-                
-                const repoUrl = document.getElementById('testRepo').value;
-                const projectName = document.getElementById('projectName').value;
-                
-                if (!repoUrl || !projectName) {
-                    throw new Error('Please enter both repository URL and project name');
-                }
-                
-                log(`Starting GitHub upload test for: ${repoUrl}`, 'info');
-                
-                // Prepare upload data
-                const uploadData = {
-                    projectName: projectName,
-                    projectDescription: `Test import of ${repoUrl}`,
-                    projectType: 'library',
-                    uploadMethod: 'github',
-                    githubRepo: repoUrl
-                };
-                
-                log('Sending upload request...', 'info');
-                
-                // Send upload request
-                const token = localStorage.getItem('debugflow_token');
-                const response = await fetch(`${API_BASE}/upload`, {
+                const response = await fetch(`${API_URL}/auth/login`, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success && data.token) {
+                    authToken = data.token;
+                    localStorage.setItem('debugflow_token', authToken);
+                    responseDiv.className = 'response-area success';
+                    responseDiv.innerHTML = `✅ Authentication Successful!\n\nToken: ${authToken.substring(0, 20)}...\n\nUser: ${JSON.stringify(data.user, null, 2)}`;
+                } else {
+                    throw new Error(data.message || 'Authentication failed');
+                }
+            } catch (error) {
+                responseDiv.className = 'response-area error';
+                responseDiv.textContent = `❌ Authentication Failed:\n${error.message}`;
+            }
+        }
+        
+        async function testGitHubUpload() {
+            const responseDiv = document.getElementById('uploadResponse');
+            
+            if (!authToken) {
+                authToken = localStorage.getItem('debugflow_token');
+                if (!authToken) {
+                    responseDiv.style.display = 'block';
+                    responseDiv.className = 'response-area error';
+                    responseDiv.textContent = '❌ Please login first!';
+                    return;
+                }
+            }
+            
+            const projectName = document.getElementById('projectName').value;
+            const projectDescription = document.getElementById('projectDescription').value;
+            const projectType = document.getElementById('projectType').value;
+            const githubRepo = document.getElementById('githubRepo').value;
+            const deploymentUrl = document.getElementById('deploymentUrl').value;
+            
+            if (!githubRepo) {
+                responseDiv.style.display = 'block';
+                responseDiv.className = 'response-area error';
+                responseDiv.textContent = '❌ Please enter a GitHub repository URL!';
+                return;
+            }
+            
+            responseDiv.style.display = 'block';
+            responseDiv.className = 'response-area info';
+            responseDiv.innerHTML = `⏳ Uploading GitHub repository...\n\nRepository: ${githubRepo}`;
+            
+            try {
+                const uploadData = {
+                    projectName: projectName || 'GitHub Import',
+                    projectDescription: projectDescription || `Imported from ${githubRepo}`,
+                    projectType: projectType,
+                    uploadMethod: 'github',
+                    githubRepo: githubRepo
+                };
+                
+                if (deploymentUrl) {
+                    uploadData.deploymentUrl = deploymentUrl;
+                }
+                
+                console.log('Sending upload request:', uploadData);
+                
+                const response = await fetch(`${API_URL}/upload`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
                     },
                     body: JSON.stringify(uploadData)
                 });
                 
-                const responseText = await response.text();
-                log(`Response status: ${response.status}`, 'info');
-                log(`Response body: ${responseText}`, 'info');
+                const data = await response.json();
+                console.log('Upload response:', data);
                 
-                if (!response.ok) {
-                    throw new Error(`Upload failed: ${response.status} ${response.statusText}\\nResponse: ${responseText}`);
-                }
-                
-                const result = JSON.parse(responseText);
-                
-                if (result.success) {
-                    log('Upload request successful!', 'info');
-                    
-                    updateTestResult('github-upload-test', 'success', `
-                        <p><strong>✅ GitHub upload successful!</strong></p>
-                        <p>Project ID: <code>${result.data.project.id}</code></p>
-                        <p>Status: <code>${result.data.project.status}</code></p>
-                        <p>Upload Method: <code>${result.data.project.uploadMethod}</code></p>
-                        <p>Source URL: <code>${result.data.project.sourceUrl}</code></p>
-                        ${result.data.warnings ? `<p>Warnings: ${result.data.warnings.join(', ')}</p>` : ''}
-                    `);
-                    
-                    // Test project retrieval
-                    setTimeout(() => testProjectRetrieval(result.data.project.id), 2000);
-                    
+                if (data.success) {
+                    responseDiv.className = 'response-area success';
+                    responseDiv.innerHTML = `✅ GitHub Repository Uploaded Successfully!\n\n${JSON.stringify(data, null, 2)}`;
                 } else {
-                    throw new Error(result.message || 'Upload failed with unknown error');
+                    throw new Error(data.message || 'Upload failed');
                 }
-                
             } catch (error) {
-                log(`GitHub upload test failed: ${error.message}`, 'error');
-                updateTestResult('github-upload-test', 'error', `
-                    <p><strong>❌ GitHub upload failed</strong></p>
-                    <p>Error: ${error.message}</p>
-                    <p>Check the console and logs for more details.</p>
-                `);
-            } finally {
-                testBtn.disabled = false;
-                testBtn.textContent = 'Run GitHub Upload Test';
+                console.error('Upload error:', error);
+                responseDiv.className = 'response-area error';
+                responseDiv.textContent = `❌ Upload Failed:\n${error.message}\n\nPlease check the console for more details.`;
             }
         }
-
-        async function testProjectRetrieval(projectId) {
-            const testDiv = createTestResult('project-retrieval-test', 'Project Retrieval Test');
+        
+        async function checkProjects() {
+            const responseDiv = document.getElementById('projectsResponse');
+            
+            if (!authToken) {
+                authToken = localStorage.getItem('debugflow_token');
+                if (!authToken) {
+                    responseDiv.style.display = 'block';
+                    responseDiv.className = 'response-area error';
+                    responseDiv.textContent = '❌ Please login first!';
+                    return;
+                }
+            }
+            
+            responseDiv.style.display = 'block';
+            responseDiv.className = 'response-area info';
+            responseDiv.textContent = '⏳ Fetching projects...';
             
             try {
-                log(`Testing project retrieval for ID: ${projectId}`, 'info');
-                
-                const token = localStorage.getItem('debugflow_token');
-                const response = await fetch(`${API_BASE}/projects?id=${projectId}`, {
+                const response = await fetch(`${API_URL}/projects`, {
+                    method: 'GET',
                     headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Content-Type': 'application/json'
+                        'Authorization': `Bearer ${authToken}`
                     }
                 });
                 
-                if (!response.ok) {
-                    throw new Error(`Failed to retrieve project: ${response.status} ${response.statusText}`);
-                }
+                const data = await response.json();
                 
-                const result = await response.json();
-                
-                if (result.success && result.data.project) {
-                    const project = result.data.project;
-                    log('Project retrieval successful!', 'info');
-                    
-                    updateTestResult('project-retrieval-test', 'success', `
-                        <p><strong>✅ Project retrieved successfully!</strong></p>
-                        <p>Name: <code>${project.name}</code></p>
-                        <p>Status: <code>${project.status}</code></p>
-                        <p>Language: <code>${project.language}</code></p>
-                        <p>File Count: <code>${project.file_count}</code></p>
-                        <p>Created: <code>${project.created_at}</code></p>
-                    `);
+                if (data.success) {
+                    responseDiv.className = 'response-area success';
+                    responseDiv.innerHTML = `✅ Projects Retrieved:\n\n${JSON.stringify(data.data, null, 2)}`;
                 } else {
-                    throw new Error('Project not found in response');
+                    throw new Error(data.message || 'Failed to fetch projects');
                 }
-                
             } catch (error) {
-                log(`Project retrieval test failed: ${error.message}`, 'error');
-                updateTestResult('project-retrieval-test', 'error', `
-                    <p><strong>❌ Project retrieval failed</strong></p>
-                    <p>Error: ${error.message}</p>
-                `);
+                responseDiv.className = 'response-area error';
+                responseDiv.textContent = `❌ Failed to fetch projects:\n${error.message}`;
             }
         }
-
-        // Initialize
-        window.onload = function() {
-            log('GitHub Upload Test Suite initialized', 'info');
-            log('Testing against production API: ' + API_BASE, 'info');
-            
-            // Run auth test on load
-            setTimeout(runAuthTest, 1000);
-        };
+        
+        // Auto-login on page load if we have stored credentials
+        window.addEventListener('load', () => {
+            const storedToken = localStorage.getItem('debugflow_token');
+            if (storedToken) {
+                authToken = storedToken;
+                document.getElementById('authResponse').style.display = 'block';
+                document.getElementById('authResponse').className = 'response-area info';
+                document.getElementById('authResponse').textContent = '✅ Using stored authentication token';
+            }
+        });
     </script>
 </body>
 </html>
