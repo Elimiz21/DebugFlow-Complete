@@ -8,7 +8,14 @@
     "build": "vite build",
     "preview": "vite preview",
     "socket-server": "node server/index.js",
-    "dev:full": "concurrently \"npm run dev\" \"npm run socket-server\""
+    "dev:full": "concurrently \"npm run dev\" \"npm run socket-server\"",
+    "dev:setup": "npm rebuild sqlite3 --build-from-source && npm run prepare:db",
+    "prepare:db": "node -e \"import('./database/database.js').then(m => m.default.initialize()).then(() => console.log('Database ready')).catch(console.error)\"",
+    "setup": "bash .devcontainer/setup.sh",
+    "rebuild:sqlite": "npm rebuild sqlite3 --build-from-source",
+    "clean": "rm -rf node_modules package-lock.json dist",
+    "clean:install": "npm run clean && npm install",
+    "postinstall": "npm rebuild sqlite3 2>/dev/null || true"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.0.0",

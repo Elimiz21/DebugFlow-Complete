@@ -1,44 +1,99 @@
 {
   "name": "DebugFlow Development",
-  "image": "node:20",
-  
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:1-20-bullseye",
   "features": {
-    "ghcr.io/devcontainers/features/git:1": {}
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": true,
+      "configureZshAsDefaultShell": false,
+      "installOhMyZsh": false,
+      "upgradePackages": true
+    },
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "latest",
+      "ppa": false
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "installDirectlyFromGitHubRelease": true,
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20",
+      "nodeGypDependencies": true
+    }
   },
-
   "customizations": {
     "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "/bin/bash",
+            "icon": "terminal-bash"
+          }
+        },
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "editor.codeActionsOnSave": {
+          "source.fixAll.eslint": "explicit"
+        },
+        "files.autoSave": "afterDelay",
+        "files.autoSaveDelay": 1000,
+        "javascript.updateImportsOnFileMove.enabled": "always",
+        "typescript.updateImportsOnFileMove.enabled": "always",
+        "npm.enableRunFromFolder": true
+      },
       "extensions": [
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
-        "bradlc.vscode-tailwindcss"
-      ],
-      "settings": {
-        "terminal.integrated.defaultProfile.linux": "bash",
-        "editor.formatOnSave": true,
-        "editor.defaultFormatter": "esbenp.prettier-vscode"
-      }
+        "bradlc.vscode-tailwindcss",
+        "dsznajder.es7-react-js-snippets",
+        "christian-kohler.path-intellisense",
+        "formulahendry.auto-rename-tag",
+        "formulahendry.auto-close-tag"
+      ]
     }
   },
-
-  "forwardPorts": [3000, 3001, 5173],
-  
-  "postCreateCommand": "npm install || true",
-  
-  "remoteUser": "node",
-  
+  "forwardPorts": [5173, 3001, 3000, 4173],
   "portsAttributes": {
-    "3000": {
-      "label": "Frontend",
-      "onAutoForward": "notify"
+    "5173": {
+      "label": "Vite Dev Server",
+      "onAutoForward": "notify",
+      "requireLocalPort": false,
+      "protocol": "https"
     },
     "3001": {
-      "label": "API",
-      "onAutoForward": "notify"
+      "label": "API Server",
+      "onAutoForward": "notify",
+      "requireLocalPort": false,
+      "protocol": "http"
     },
-    "5173": {
-      "label": "Vite",
-      "onAutoForward": "notify"
+    "3000": {
+      "label": "Alternative Frontend",
+      "onAutoForward": "silent",
+      "requireLocalPort": false
+    },
+    "4173": {
+      "label": "Vite Preview",
+      "onAutoForward": "silent",
+      "requireLocalPort": false
     }
-  }
+  },
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "postStartCommand": "echo '🚀 DebugFlow Codespace Ready! Run: npm run dev'",
+  "remoteUser": "node",
+  "remoteEnv": {
+    "NODE_ENV": "development",
+    "VITE_API_URL": "${localEnv:CODESPACE_NAME:http://localhost}:3001/api"
+  },
+  "mounts": [
+    "source=${localWorkspaceFolderBasename}-node_modules,target=${containerWorkspaceFolder}/node_modules,type=volume"
+  ],
+  "runArgs": [
+    "--cap-add=SYS_PTRACE",
+    "--security-opt",
+    "seccomp=unconfined"
+  ],
+  "updateContentCommand": "npm install",
+  "waitFor": "postCreateCommand",
+  "shutdownAction": "stopContainer"
 }

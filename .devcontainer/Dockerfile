@@ -1,42 +1,45 @@
-# Use the official Node.js image as base
-FROM node:20-bullseye
-
-# Install basic development tools
-RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    wget \
-    vim \
-    sudo \
-    build-essential \
-    python3 \
-    && rm -rf /var/lib/apt/lists/*
-
-# Install GitHub CLI
-RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
-    && chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-    && apt-get update \
-    && apt-get install gh -y \
-    && rm -rf /var/lib/apt/lists/*
-
-# Create a non-root user
-ARG USERNAME=node
-ARG USER_UID=1000
-ARG USER_GID=$USER_UID
-
-# Ensure the node user has sudo access
-RUN echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
-    && chmod 0440 /etc/sudoers.d/$USERNAME
-
-# Set the working directory
-WORKDIR /workspace
-
-# Switch to the node user
-USER $USERNAME
+# Use the official Node.js image with build tools
+FROM mcr.microsoft.com/devcontainers/javascript-node:1-20-bullseye
 
 # Set environment variables
 ENV NODE_ENV=development
+ENV DEBIAN_FRONTEND=noninteractive
 
-# Keep the container running
-CMD ["sleep", "infinity"]
+# Install additional dependencies for native modules
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    python3-dev \
+    libsqlite3-dev \
+    sqlite3 \
+    pkg-config \
+    libc6-dev \
+    make \
+    g++ \
+    git \
+    curl \
+    wget \
+    unzip \
+    ca-certificates \
+    gnupg \
+    lsb-release \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install latest npm globally
+RUN npm install -g npm@latest node-gyp
+
+# Set working directory
+WORKDIR /workspaces/DebugFlow-Complete
+
+# Copy package files for dependency pre-installation (optional optimization)
+COPY package*.json ./
+
+# Pre-install dependencies to speed up container startup
+RUN npm ci --only=production && npm cache clean --force
+
+# Create user with proper permissions
+RUN groupadd --gid 1000 vscode \
+    && useradd --uid 1000 --gid vscode --shell /bin/bash --create-home vscode \
+    && chown -R vscode:vscode /workspaces
+
+# Switch to vscode user
+USER vscode
