@@ -83,7 +83,11 @@
   "remoteUser": "node",
   "remoteEnv": {
     "NODE_ENV": "development",
-    "VITE_API_URL": "${localEnv:CODESPACE_NAME:http://localhost}:3001/api"
+    "VITE_API_URL": "${localEnv:CODESPACE_NAME:http://localhost}:3001/api",
+    "DANGEROUSLY_SKIP_PERMISSIONS": "true"
+  },
+  "containerEnv": {
+    "DANGEROUSLY_SKIP_PERMISSIONS": "true"
   },
   "mounts": [
     "source=${localWorkspaceFolderBasename}-node_modules,target=${containerWorkspaceFolder}/node_modules,type=volume"
