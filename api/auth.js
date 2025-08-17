@@ -1,11 +1,16 @@
 import { AuthUtils } from '../utils/auth.js';
 import database from '../database/database.js';
 import memoryDatabase from '../database/memoryDatabase.js';
+import vercelDatabase from '../database/vercelDatabase.js';
 import Joi from 'joi';
 
-// Use memory database in serverless environment (Vercel), regular database locally
+// Smart database selection: Vercel Postgres > Memory > SQLite
 const getDatabase = () => {
-  // Check if we're in Vercel serverless environment
+  // First check if Vercel Postgres is available
+  if (process.env.POSTGRES_URL) {
+    return vercelDatabase;
+  }
+  // Then check if we're in serverless environment
   const isServerless = process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME;
   return isServerless ? memoryDatabase : database;
 };
