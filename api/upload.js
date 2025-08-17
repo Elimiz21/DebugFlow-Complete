@@ -4,6 +4,8 @@ import database from '../database/database.js';
 import memoryDatabase from '../database/memoryDatabase.js';
 import { v4 as uuidv4 } from 'uuid';
 import Joi from 'joi';
+import githubFetcher from '../utils/githubFetcher.js';
+import urlFetcher from '../utils/urlFetcher.js';
 
 // Use memory database in serverless environment (Vercel), regular database locally
 const getDatabase = () => {
@@ -285,7 +287,7 @@ async function handleFileUpload(req, res, user) {
 // Handle URL/GitHub imports
 async function handleUrlImport(req, res, user, data) {
   try {
-    const { projectName, projectDescription, projectType, uploadMethod, appUrl, githubRepo, deploymentUrl } = data;
+    const { projectName, projectDescription, projectType, uploadMethod, appUrl, githubRepo, deploymentUrl, codebaseUrl } = data;
     
     // Generate unique project ID
     const projectId = uuidv4();
@@ -401,54 +403,40 @@ async function processUrlImportInBackground(projectId, uploadMethod, sourceUrl, 
     
     if (uploadMethod === 'github') {
       try {
-        // Simple GitHub URL parsing without external dependencies
-        const githubUrlMatch = sourceUrl.match(/github\.com\/([^\/]+)\/([^\/\.]+)(?:\.git)?(?:\/.*)?$/);
-        if (!githubUrlMatch) {
-          throw new Error('Invalid GitHub repository URL format');
+        console.log(`Fetching GitHub repository: ${sourceUrl}`);
+        
+        // Use the GitHub fetcher to import the repository
+        const importResult = await githubFetcher.importRepository(sourceUrl, {
+          maxFiles: 50, // Limit for initial import
+          excludePatterns: ['node_modules', 'dist', 'build', '.git']
+        });
+        
+        if (!importResult.success) {
+          throw new Error(importResult.error || 'Failed to import GitHub repository');
         }
         
-        const [, owner, repo] = githubUrlMatch;
-        projectLanguage = 'Repository';
+        // Use the fetched files
+        importedFiles = importResult.files;
+        projectLanguage = importResult.stats.primaryLanguage;
         
-        // Create a basic GitHub import record
-        importedFiles = [
-          {
-            filename: '_github_import.md',
-            filepath: '/',
-            content: `# GitHub Repository Import\n\n**Repository:** ${sourceUrl}\n**Owner:** ${owner}\n**Repository Name:** ${repo}\n**Imported At:** ${new Date().toISOString()}\n\n## Status\n✅ Repository URL validated and imported successfully\n\n## Next Steps\n- The repository content will be analyzed\n- Code structure will be mapped\n- Potential issues will be identified\n\n## Repository Information\n- **GitHub URL:** [${sourceUrl}](${sourceUrl})\n- **Import Method:** GitHub API\n- **Status:** Imported\n\n*Note: Full repository analysis is being processed in the background.*`,
-            size_bytes: 500,
-            language: 'Markdown'
-          },
-          {
-            filename: '_repository_metadata.json',
-            filepath: '/',
-            content: JSON.stringify({
-              type: 'github_repository',
-              sourceUrl,
-              owner,
-              repository: repo,
-              deploymentUrl,
-              importedAt: new Date().toISOString(),
-              status: 'imported',
-              analysisStatus: 'pending'
-            }, null, 2),
-            size_bytes: 200,
-            language: 'JSON'
-          }
-        ];
+        // Add repository metadata
+        importedFiles.push({
+          filename: '_repository_metadata.json',
+          filepath: '/',
+          content: JSON.stringify({
+            type: 'github_repository',
+            sourceUrl,
+            repository: importResult.repository,
+            deploymentUrl,
+            importedAt: new Date().toISOString(),
+            status: 'imported',
+            stats: importResult.stats
+          }, null, 2),
+          size_bytes: 500,
+          language: 'JSON'
+        });
         
-        // Add deployment info if provided
-        if (deploymentUrl) {
-          importedFiles.push({
-            filename: '_deployment_info.md',
-            filepath: '/',
-            content: `# Deployment Information\n\n**Live URL:** [${deploymentUrl}](${deploymentUrl})\n**Repository:** [${sourceUrl}](${sourceUrl})\n**Connected At:** ${new Date().toISOString()}\n\n## Deployment Details\n- **Type:** External Deployment\n- **URL:** ${deploymentUrl}\n- **Status:** Connected\n\nThis deployment is linked to the imported GitHub repository for comprehensive analysis.`,
-            size_bytes: 300,
-            language: 'Markdown'
-          });
-        }
-        
-        console.log(`Successfully created import record for GitHub repository ${owner}/${repo}`);
+        console.log(`Successfully imported ${importedFiles.length} files from GitHub repository`);
         
       } catch (githubError) {
         console.error('GitHub import error:', githubError.message);
@@ -465,18 +453,46 @@ async function processUrlImportInBackground(projectId, uploadMethod, sourceUrl, 
         projectLanguage = 'Import Failed';
       }
     } else {
-      // For URL imports, create a basic placeholder
-      importedFiles = [
-        {
-          filename: '_url_import.md',
-          filepath: '/',
-          content: `# URL Import\n\nThis project was imported from: ${sourceUrl}\n\n${deploymentUrl ? `Deployment URL: ${deploymentUrl}\n\n` : ''}Imported at: ${new Date().toISOString()}\n\n**Note:** URL content analysis is not yet implemented. This is a placeholder for the imported project.`,
-          size_bytes: 200,
-          language: 'Markdown'
+      // For URL imports, fetch actual content
+      try {
+        console.log(`Fetching web content from: ${sourceUrl}`);
+        
+        const fetchResult = await urlFetcher.fetchWebContent(sourceUrl);
+        
+        if (!fetchResult.success) {
+          throw new Error(fetchResult.error || 'Failed to fetch URL content');
         }
-      ];
-      
-      projectLanguage = 'Web App';
+        
+        importedFiles = fetchResult.files;
+        projectLanguage = fetchResult.analysis.type === 'html' ? 'Web App' : 
+                         fetchResult.analysis.type === 'json' ? 'API' : 
+                         'Web Content';
+        
+        // Add import summary
+        importedFiles.push({
+          filename: '_url_import_summary.md',
+          filepath: '/',
+          content: `# URL Import Summary\n\n**Source URL:** ${sourceUrl}\n**Content Type:** ${fetchResult.contentType}\n**Size:** ${fetchResult.contentLength} bytes\n**Imported At:** ${new Date().toISOString()}\n\n## Analysis\n- Type: ${fetchResult.analysis.type}\n${fetchResult.analysis.frameworks ? `- Frameworks: ${fetchResult.analysis.frameworks.join(', ')}\n` : ''}${fetchResult.analysis.issues ? `- Issues Found: ${fetchResult.analysis.issues.length}\n` : ''}\n\n## Statistics\n${JSON.stringify(fetchResult.analysis, null, 2)}`,
+          size_bytes: 500,
+          language: 'Markdown'
+        });
+        
+        console.log(`Successfully imported ${importedFiles.length} files from URL`);
+        
+      } catch (urlError) {
+        console.error('URL import error:', urlError.message);
+        
+        // Fall back to basic import
+        importedFiles = [{
+          filename: '_import_error.md',
+          filepath: '/',
+          content: `# URL Import Error\n\nFailed to import content from: ${sourceUrl}\n\nError: ${urlError.message}\n\nThis could be due to:\n- URL is not accessible\n- Content is too large\n- Network issues\n- CORS restrictions\n\nTry again later or check the URL.`,
+          size_bytes: 300,
+          language: 'Markdown'
+        }];
+        
+        projectLanguage = 'Import Failed';
+      }
     }
     
     // Update project with import results

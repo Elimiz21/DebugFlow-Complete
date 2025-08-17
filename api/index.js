@@ -15,6 +15,9 @@ import testRunnerRouter from './test-runner.js';
 import analyticsRouter from './analytics.js';
 import settingsRouter from './settings.js';
 import debugSessionRouter from './debug-sessions.js';
+import bugsRouter from './bugs.js';
+import jobsRouter from './jobs.js';
+import adminRouter from './admin.js';
 
 const router = express.Router();
 
@@ -37,6 +40,9 @@ router.use('/test-runner', testRunnerRouter);
 router.use('/analytics', analyticsRouter);
 router.use('/settings', settingsRouter);
 router.use('/debug-sessions', debugSessionRouter);
+router.use('/bugs', bugsRouter);
+router.use('/jobs', jobsRouter);
+router.use('/admin', adminRouter);
 
 // 404 handler for undefined API routes
 router.use('*', (req, res) => {

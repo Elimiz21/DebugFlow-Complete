@@ -89,7 +89,7 @@ export default async function handler(req, res) {
 
 async function handleGetProjects(req, res) {
   try {
-    const { id } = req.query;
+    const { id, files } = req.query;
     
     if (id) {
       // Get specific project
@@ -108,6 +108,18 @@ async function handleGetProjects(req, res) {
         return res.status(403).json({
           success: false,
           message: 'Access denied. You do not own this project.'
+        });
+      }
+      
+      // If files are requested, include them
+      if (files === 'true') {
+        const projectFiles = await db.getProjectFiles(id);
+        return res.status(200).json({
+          success: true,
+          data: { 
+            project,
+            files: projectFiles
+          }
         });
       }
       

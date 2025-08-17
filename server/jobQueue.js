@@ -4,6 +4,7 @@
 import EventEmitter from 'events';
 import database from '../database/database.js';
 import { v4 as uuidv4 } from 'uuid';
+import testRunner from '../utils/testRunner.js';
 
 class JobQueue extends EventEmitter {
   constructor() {
@@ -458,6 +459,60 @@ class JobQueue extends EventEmitter {
         type,
         cleaned
       };
+    });
+
+    // Test execution handler
+    this.registerHandler('test-execution', async (payload) => {
+      const { runId, projectId, framework, projectPath, options } = payload;
+      console.log(`Executing tests for project ${projectId} with framework ${framework}`);
+      
+      try {
+        // Run the actual tests
+        const results = await testRunner.runTests(projectId, projectPath, framework, options);
+        
+        // Update test run in database
+        await database.run(
+          `UPDATE test_runs 
+           SET status = ?, completed_at = ?, results = ?, output = ?
+           WHERE id = ?`,
+          [
+            results.status,
+            results.completedAt,
+            JSON.stringify({
+              passed: results.passed,
+              failed: results.failed,
+              skipped: results.skipped,
+              total: results.total,
+              duration: results.duration,
+              coverage: results.coverage
+            }),
+            JSON.stringify({
+              stdout: results.output,
+              stderr: results.errors,
+              exitCode: results.exitCode
+            }),
+            runId
+          ]
+        );
+        
+        return {
+          success: true,
+          testId: runId,
+          results
+        };
+      } catch (error) {
+        console.error('Test execution error:', error);
+        
+        // Update test run as failed
+        await database.run(
+          `UPDATE test_runs 
+           SET status = 'failed', completed_at = ?, error = ?
+           WHERE id = ?`,
+          [new Date().toISOString(), error.message, runId]
+        );
+        
+        throw error;
+      }
     });
   }
 

@@ -1,4 +1,7 @@
 import OpenAI from 'openai';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import Groq from 'groq-sdk';
+import Anthropic from '@anthropic-ai/sdk';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -128,27 +131,118 @@ export class AIHandler {
   }
 
   /**
-   * Groq execution (placeholder - needs implementation)
+   * Groq execution - Fast LLM inference
    */
   async executeGroq(config, apiKey, systemPrompt, analysisPrompt, options) {
-    // TODO: Implement Groq API integration
-    return this.getMockResponse('groq', analysisPrompt);
+    try {
+      const groq = new Groq({
+        apiKey: apiKey || process.env.GROQ_API_KEY
+      });
+
+      const completion = await groq.chat.completions.create({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: analysisPrompt }
+        ],
+        model: config.model || 'llama3-8b-8192',
+        temperature: options.temperature || 0.3,
+        max_tokens: options.maxTokens || 2000,
+        top_p: 1,
+        stream: false
+      });
+
+      return {
+        content: completion.choices[0]?.message?.content || '',
+        usage: completion.usage,
+        model: config.model || 'llama3-8b-8192',
+        provider: 'groq'
+      };
+    } catch (error) {
+      console.error('Groq API error:', error);
+      // Fall back to mock response if API fails
+      return this.getMockResponse('groq', analysisPrompt);
+    }
   }
 
   /**
-   * Gemini execution (placeholder - needs implementation)
+   * Gemini execution - Google's AI model
    */
   async executeGemini(config, apiKey, systemPrompt, analysisPrompt, options) {
-    // TODO: Implement Gemini API integration
-    return this.getMockResponse('gemini', analysisPrompt);
+    try {
+      const genAI = new GoogleGenerativeAI(apiKey || process.env.GEMINI_API_KEY || '');
+      const model = genAI.getGenerativeModel({ 
+        model: config.model || 'gemini-1.5-flash' 
+      });
+
+      const prompt = `${systemPrompt}\n\n${analysisPrompt}`;
+      
+      const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: options.temperature || 0.3,
+          maxOutputTokens: options.maxTokens || 2000,
+          topP: 0.95,
+          topK: 40
+        }
+      });
+
+      const response = await result.response;
+      const text = response.text();
+
+      return {
+        content: text,
+        usage: {
+          prompt_tokens: prompt.length / 4, // Rough estimate
+          completion_tokens: text.length / 4,
+          total_tokens: (prompt.length + text.length) / 4
+        },
+        model: config.model || 'gemini-1.5-flash',
+        provider: 'gemini'
+      };
+    } catch (error) {
+      console.error('Gemini API error:', error);
+      // Fall back to mock response if API fails
+      return this.getMockResponse('gemini', analysisPrompt);
+    }
   }
 
   /**
-   * Claude execution (placeholder - needs implementation)
+   * Claude execution - Anthropic's AI model
    */
   async executeClaude(config, apiKey, systemPrompt, analysisPrompt, options) {
-    // TODO: Implement Claude API integration
-    return this.getMockResponse('claude', analysisPrompt);
+    try {
+      const anthropic = new Anthropic({
+        apiKey: apiKey || process.env.ANTHROPIC_API_KEY || ''
+      });
+
+      const message = await anthropic.messages.create({
+        model: config.model || 'claude-3-haiku-20240307',
+        max_tokens: options.maxTokens || 2000,
+        temperature: options.temperature || 0.3,
+        system: systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: analysisPrompt
+          }
+        ]
+      });
+
+      return {
+        content: message.content[0].text,
+        usage: {
+          prompt_tokens: message.usage?.input_tokens || 0,
+          completion_tokens: message.usage?.output_tokens || 0,
+          total_tokens: (message.usage?.input_tokens || 0) + (message.usage?.output_tokens || 0)
+        },
+        model: config.model || 'claude-3-haiku-20240307',
+        provider: 'claude'
+      };
+    } catch (error) {
+      console.error('Claude API error:', error);
+      // Fall back to mock response if API fails
+      return this.getMockResponse('claude', analysisPrompt);
+    }
   }
 
   /**

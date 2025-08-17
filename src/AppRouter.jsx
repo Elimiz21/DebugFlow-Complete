@@ -13,6 +13,7 @@ import SEODashboard from './pages/SEODashboard.jsx';
 
 // Private application pages (existing)
 import App from './App.jsx';
+import AdminDashboard from './pages/AdminDashboard.jsx';
 
 // Authentication guard component
 const ProtectedRoute = ({ children }) => {
@@ -230,6 +231,9 @@ const AppRouter = () => {
             <SEODashboard />
           </ProtectedRoute>
         } />
+        
+        {/* Admin route - no regular auth protection, uses its own */}
+        <Route path="/admin" element={<AdminDashboard />} />
         
         {/* Catch-all route - redirect to landing page */}
         <Route path="*" element={<Navigate to="/" replace />} />
