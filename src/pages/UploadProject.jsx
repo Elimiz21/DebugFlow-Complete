@@ -113,11 +113,17 @@ const UploadProject = () => {
         }
 
         // Upload to backend using JSON
+        console.log('📤 Uploading GitHub repository:', uploadData);
+        console.log('Upload method:', uploadData.uploadMethod);
+        console.log('GitHub URL:', uploadData.githubRepo);
+        
         response = await api.post('/upload', uploadData, {
           headers: {
             'Content-Type': 'application/json'
           }
         });
+        
+        console.log('📥 Upload response:', response.data);
       }
 
       const result = response.data;
@@ -163,7 +169,12 @@ const UploadProject = () => {
       
     } catch (error) {
       console.error('Upload error:', error);
-      toast.error(error.message || 'Failed to upload project');
+      console.error('Error response:', error.response?.data);
+      console.error('Error status:', error.response?.status);
+      
+      // Extract error message from axios error
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to upload project';
+      toast.error(errorMessage);
     } finally {
       setIsProcessing(false);
     }
@@ -266,6 +277,19 @@ const UploadProject = () => {
                   value={projectData.name}
                   onChange={(e) => setProjectData(prev => ({ ...prev, name: e.target.value }))}
                   placeholder={projectType === 'repo' ? 'My Repository' : 'My Awesome App'}
+                  className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Project Description
+                </label>
+                <textarea
+                  value={projectData.description}
+                  onChange={(e) => setProjectData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Describe your project (optional)"
+                  rows="3"
                   className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>

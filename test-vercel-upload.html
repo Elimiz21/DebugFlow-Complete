@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vercel GitHub Upload Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        .card {
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #e5e7eb;
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: transform 0.2s;
+            width: 100%;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .success {
+            color: #059669;
+            background: #D1FAE5;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 10px 0;
+            border-left: 4px solid #10B981;
+        }
+        .error {
+            color: #DC2626;
+            background: #FEE2E2;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 10px 0;
+            border-left: 4px solid #EF4444;
+        }
+        .info {
+            color: #1E40AF;
+            background: #DBEAFE;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 10px 0;
+            border-left: 4px solid #3B82F6;
+        }
+        .warning {
+            color: #92400E;
+            background: #FEF3C7;
+            padding: 12px;
+            border-radius: 6px;
+            margin: 10px 0;
+            border-left: 4px solid #F59E0B;
+        }
+        pre {
+            background: #1f2937;
+            color: #f3f4f6;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-size: 12px;
+            line-height: 1.5;
+        }
+        .api-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .api-option {
+            flex: 1;
+            padding: 10px;
+            text-align: center;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .api-option.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+        .debug-log {
+            max-height: 300px;
+            overflow-y: auto;
+            background: #1f2937;
+            border-radius: 6px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        .debug-entry {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #4b5563;
+        }
+        .debug-entry.success { border-left-color: #10B981; }
+        .debug-entry.error { border-left-color: #EF4444; }
+        .debug-entry.info { border-left-color: #3B82F6; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 DebugFlow Vercel Upload Test</h1>
+        
+        <div class="card">
+            <h3>Select API Endpoint</h3>
+            <div class="api-selector">
+                <div class="api-option active" onclick="selectAPI('vercel')" id="api-vercel">
+                    <strong>Vercel Production</strong><br>
+                    <small>debug-flow-complete-7lnj.vercel.app</small>
+                </div>
+                <div class="api-option" onclick="selectAPI('local')" id="api-local">
+                    <strong>Local Development</strong><br>
+                    <small>localhost:3001</small>
+                </div>
+            </div>
+            <div id="currentAPI" class="info">Using: https://debug-flow-complete-7lnj.vercel.app/api</div>
+        </div>
+
+        <div class="card">
+            <h3>1️⃣ Authentication</h3>
+            <input type="email" id="email" placeholder="Email" value="demo@debugflow.com">
+            <input type="password" id="password" placeholder="Password" value="demo123">
+            <button onclick="login()">🔐 Login</button>
+            <div id="authStatus"></div>
+        </div>
+
+        <div class="card">
+            <h3>2️⃣ Upload GitHub Repository</h3>
+            <input type="text" id="projectName" placeholder="Project Name" value="Test Repository">
+            <textarea id="projectDescription" placeholder="Project Description" rows="2">Testing GitHub import on Vercel deployment</textarea>
+            <select id="projectType">
+                <option value="web-app">Web App</option>
+                <option value="api">API</option>
+                <option value="script">Script</option>
+                <option value="library">Library</option>
+            </select>
+            <input type="url" id="githubRepo" placeholder="GitHub Repository URL" value="https://github.com/vercel/next.js">
+            <input type="url" id="deploymentUrl" placeholder="Deployment URL (optional)">
+            <button onclick="uploadGithubRepo()" id="uploadBtn" disabled>📤 Upload GitHub Repository</button>
+            <div id="uploadStatus"></div>
+        </div>
+
+        <div class="card">
+            <h3>3️⃣ View Projects</h3>
+            <button onclick="getProjects()">📋 Fetch My Projects</button>
+            <div id="projectsList"></div>
+        </div>
+
+        <div class="card">
+            <h3>🔍 Debug Console</h3>
+            <div class="debug-log" id="debugConsole">
+                <div class="debug-entry info">Console initialized. Ready for testing.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let authToken = null;
+        let API_URL = 'https://debug-flow-complete-7lnj.vercel.app/api';
+        
+        function selectAPI(type) {
+            document.querySelectorAll('.api-option').forEach(el => el.classList.remove('active'));
+            document.getElementById(`api-${type}`).classList.add('active');
+            
+            if (type === 'vercel') {
+                API_URL = 'https://debug-flow-complete-7lnj.vercel.app/api';
+                document.getElementById('currentAPI').innerHTML = `<div class="info">Using: ${API_URL}</div>`;
+            } else {
+                API_URL = 'http://localhost:3001/api';
+                document.getElementById('currentAPI').innerHTML = `<div class="warning">Using: ${API_URL} (ensure local server is running)</div>`;
+            }
+            log(`Switched to ${type} API: ${API_URL}`, 'info');
+        }
+        
+        function log(message, type = 'info') {
+            const console = document.getElementById('debugConsole');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `debug-entry ${type}`;
+            entry.style.color = type === 'error' ? '#EF4444' : type === 'success' ? '#10B981' : '#93C5FD';
+            entry.innerHTML = `[${timestamp}] ${message}`;
+            console.appendChild(entry);
+            console.scrollTop = console.scrollHeight;
+        }
+
+        async function login() {
+            try {
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                
+                log(`🔐 Attempting login for ${email}...`);
+                log(`API endpoint: ${API_URL}/auth?action=login`);
+                
+                const response = await fetch(`${API_URL}/auth?action=login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    authToken = data.data.token;
+                    document.getElementById('authStatus').innerHTML = `
+                        <div class="success">
+                            ✅ Successfully logged in as <strong>${data.data.user.name}</strong><br>
+                            <small>Token: ${authToken.substring(0, 20)}...</small>
+                        </div>
+                    `;
+                    document.getElementById('uploadBtn').disabled = false;
+                    log(`✅ Login successful! User: ${data.data.user.name}`, 'success');
+                    log(`Token received: ${authToken.substring(0, 30)}...`, 'success');
+                } else {
+                    document.getElementById('authStatus').innerHTML = `
+                        <div class="error">❌ Login failed: ${data.message}</div>
+                    `;
+                    log(`❌ Login failed: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                document.getElementById('authStatus').innerHTML = `
+                    <div class="error">❌ Network error: ${error.message}</div>
+                `;
+                log(`❌ Network error during login: ${error.message}`, 'error');
+                log(`Check if the API endpoint is accessible: ${API_URL}`, 'error');
+            }
+        }
+
+        async function uploadGithubRepo() {
+            if (!authToken) {
+                alert('Please login first');
+                return;
+            }
+
+            try {
+                const uploadData = {
+                    projectName: document.getElementById('projectName').value,
+                    projectDescription: document.getElementById('projectDescription').value,
+                    projectType: document.getElementById('projectType').value,
+                    uploadMethod: 'github',
+                    githubRepo: document.getElementById('githubRepo').value
+                };
+                
+                const deploymentUrl = document.getElementById('deploymentUrl').value;
+                if (deploymentUrl) {
+                    uploadData.deploymentUrl = deploymentUrl;
+                }
+
+                log(`📤 Starting GitHub upload...`);
+                log(`Endpoint: ${API_URL}/upload`);
+                log(`Headers: Content-Type: application/json, Authorization: Bearer ${authToken.substring(0, 20)}...`);
+                log(`Payload: ${JSON.stringify(uploadData, null, 2)}`);
+                
+                const response = await fetch(`${API_URL}/upload`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(uploadData)
+                });
+
+                const responseText = await response.text();
+                let data;
+                
+                try {
+                    data = JSON.parse(responseText);
+                } catch (e) {
+                    log(`❌ Invalid JSON response: ${responseText}`, 'error');
+                    throw new Error('Server returned invalid JSON');
+                }
+                
+                log(`Response status: ${response.status}`, response.ok ? 'success' : 'error');
+                log(`Response data: ${JSON.stringify(data, null, 2)}`, response.ok ? 'success' : 'error');
+                
+                if (data.success) {
+                    document.getElementById('uploadStatus').innerHTML = `
+                        <div class="success">
+                            ✅ Upload successful!<br>
+                            <strong>Project:</strong> ${data.data.project.name}<br>
+                            <strong>ID:</strong> ${data.data.project.id}<br>
+                            <strong>Status:</strong> ${data.data.project.status}<br>
+                            <strong>Method:</strong> ${data.data.project.uploadMethod || 'github'}
+                        </div>
+                    `;
+                    log(`✅ Project created successfully! ID: ${data.data.project.id}`, 'success');
+                    
+                    if (data.data.warnings) {
+                        data.data.warnings.forEach(warning => {
+                            log(`⚠️ Warning: ${warning}`, 'warning');
+                        });
+                    }
+                } else {
+                    document.getElementById('uploadStatus').innerHTML = `
+                        <div class="error">❌ Upload failed: ${data.message}</div>
+                    `;
+                    log(`❌ Upload failed: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                document.getElementById('uploadStatus').innerHTML = `
+                    <div class="error">❌ Error: ${error.message}</div>
+                `;
+                log(`❌ Upload error: ${error.message}`, 'error');
+                log(`Stack trace: ${error.stack}`, 'error');
+            }
+        }
+
+        async function getProjects() {
+            if (!authToken) {
+                alert('Please login first');
+                return;
+            }
+
+            try {
+                log('📋 Fetching projects...');
+                log(`Endpoint: ${API_URL}/projects`);
+                
+                const response = await fetch(`${API_URL}/projects`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+                log(`Response status: ${response.status}`, response.ok ? 'success' : 'error');
+                
+                if (data.success) {
+                    const projectsList = document.getElementById('projectsList');
+                    log(`✅ Found ${data.projects.length} project(s)`, 'success');
+                    
+                    if (data.projects.length === 0) {
+                        projectsList.innerHTML = '<div class="info">📭 No projects found. Upload one to get started!</div>';
+                    } else {
+                        projectsList.innerHTML = `
+                            <div class="success">
+                                <strong>📁 Found ${data.projects.length} project(s):</strong>
+                                <div style="margin-top: 10px;">
+                                    ${data.projects.map(p => `
+                                        <div style="background: white; padding: 10px; margin: 10px 0; border-radius: 6px; border-left: 3px solid #667eea;">
+                                            <strong>${p.name}</strong> 
+                                            <span style="background: #e5e7eb; padding: 2px 8px; border-radius: 4px; font-size: 12px;">${p.type}</span><br>
+                                            <small style="color: #6b7280;">
+                                                ID: ${p.id}<br>
+                                                Status: <strong>${p.status}</strong><br>
+                                                Language: ${p.language}<br>
+                                                ${p.codebase_url ? `GitHub: <a href="${p.codebase_url}" target="_blank">${p.codebase_url}</a><br>` : ''}
+                                                ${p.deployment_url ? `Live: <a href="${p.deployment_url}" target="_blank">${p.deployment_url}</a><br>` : ''}
+                                                Created: ${new Date(p.created_at).toLocaleString()}
+                                            </small>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        `;
+                        
+                        data.projects.forEach(p => {
+                            log(`Project: ${p.name} (${p.id}) - Status: ${p.status}`, 'info');
+                        });
+                    }
+                } else {
+                    document.getElementById('projectsList').innerHTML = `
+                        <div class="error">❌ Failed to fetch projects: ${data.message}</div>
+                    `;
+                    log(`❌ Failed to fetch projects: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                document.getElementById('projectsList').innerHTML = `
+                    <div class="error">❌ Network error: ${error.message}</div>
+                `;
+                log(`❌ Error fetching projects: ${error.message}`, 'error');
+            }
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            log('🚀 DebugFlow Vercel Upload Test initialized', 'success');
+            log(`Default API: ${API_URL}`, 'info');
+            log('Click "Login" to start testing', 'info');
+        });
+    </script>
+</body>
+</html>

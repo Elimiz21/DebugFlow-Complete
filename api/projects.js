@@ -225,7 +225,6 @@ async function handleUpdateProject(req, res) {
     }
 
     // Update project
-    const db = getDatabase();
     await db.updateProject(id, updates);
 
     // Fetch updated project
@@ -275,7 +274,6 @@ async function handleDeleteProject(req, res) {
     }
 
     // Delete project (CASCADE will handle related records)
-    const db = getDatabase();
     await db.run('DELETE FROM projects WHERE id = ?', [id]);
 
     res.status(200).json({

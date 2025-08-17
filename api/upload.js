@@ -228,7 +228,6 @@ async function handleFileUpload(req, res, user) {
     await db.createProject(projectData);
 
     // Save files to database
-    const db = getDatabase();
     for (const file of processedFiles) {
       await db.createProjectFile({
         project_id: projectId,

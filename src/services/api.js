@@ -18,9 +18,7 @@ const getApiBaseUrl = () => {
 
 const api = axios.create({
   baseURL: getApiBaseUrl(),
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  // Don't set default Content-Type, let each request specify it
 });
 
 // Request interceptor to add auth token
@@ -29,6 +27,22 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  
+  // Set default Content-Type if not already set
+  if (!config.headers['Content-Type']) {
+    // For FormData, let browser set the boundary
+    if (!(config.data instanceof FormData)) {
+      config.headers['Content-Type'] = 'application/json';
+    }
+  }
+  
+  console.log('🔍 API Request:', {
+    url: config.url,
+    method: config.method,
+    headers: config.headers,
+    data: config.data
+  });
+  
   return config;
 });
 

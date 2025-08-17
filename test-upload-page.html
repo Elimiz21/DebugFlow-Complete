@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GitHub Upload Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #3B82F6;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #2563EB;
+        }
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .success {
+            color: #10B981;
+            background: #D1FAE5;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .error {
+            color: #EF4444;
+            background: #FEE2E2;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .info {
+            color: #3B82F6;
+            background: #DBEAFE;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        pre {
+            background: #f3f4f6;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 4px;
+            background: #FEF3C7;
+            border-left: 4px solid #F59E0B;
+        }
+    </style>
+</head>
+<body>
+    <h1>🐛 DebugFlow GitHub Upload Test</h1>
+    
+    <div class="card">
+        <h2>Step 1: Authentication</h2>
+        <input type="email" id="email" placeholder="Email" value="demo@debugflow.com">
+        <input type="password" id="password" placeholder="Password" value="demo123">
+        <button onclick="login()">Login</button>
+        <div id="authStatus"></div>
+    </div>
+
+    <div class="card">
+        <h2>Step 2: Upload GitHub Repository</h2>
+        <input type="text" id="projectName" placeholder="Project Name" value="React Test">
+        <textarea id="projectDescription" placeholder="Project Description" rows="3">Testing GitHub repository import functionality</textarea>
+        <select id="projectType">
+            <option value="web-app">Web App</option>
+            <option value="api">API</option>
+            <option value="script">Script</option>
+            <option value="library">Library</option>
+        </select>
+        <input type="url" id="githubRepo" placeholder="GitHub Repository URL" value="https://github.com/facebook/react">
+        <input type="url" id="deploymentUrl" placeholder="Deployment URL (optional)">
+        <button onclick="uploadGithubRepo()" id="uploadBtn" disabled>Upload GitHub Repository</button>
+        <div id="uploadStatus"></div>
+    </div>
+
+    <div class="card">
+        <h2>Step 3: View Projects</h2>
+        <button onclick="getProjects()">Fetch My Projects</button>
+        <div id="projectsList"></div>
+    </div>
+
+    <div class="card">
+        <h2>Debug Console</h2>
+        <div id="debugConsole" style="font-family: monospace; font-size: 12px;"></div>
+    </div>
+
+    <script>
+        let authToken = null;
+        const API_URL = 'http://localhost:3001/api';
+        
+        function log(message, type = 'info') {
+            const console = document.getElementById('debugConsole');
+            const timestamp = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = type;
+            entry.innerHTML = `[${timestamp}] ${message}`;
+            console.appendChild(entry);
+            console.scrollTop = console.scrollHeight;
+        }
+
+        async function login() {
+            try {
+                const email = document.getElementById('email').value;
+                const password = document.getElementById('password').value;
+                
+                log(`Attempting login for ${email}...`);
+                
+                const response = await fetch(`${API_URL}/auth?action=login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+                log(`Login response: ${JSON.stringify(data)}`, response.ok ? 'success' : 'error');
+                
+                if (data.success) {
+                    authToken = data.data.token;
+                    document.getElementById('authStatus').innerHTML = `
+                        <div class="success">✅ Logged in as ${data.data.user.name}</div>
+                    `;
+                    document.getElementById('uploadBtn').disabled = false;
+                    log(`Token stored: ${authToken.substring(0, 20)}...`, 'success');
+                } else {
+                    document.getElementById('authStatus').innerHTML = `
+                        <div class="error">❌ Login failed: ${data.message}</div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('authStatus').innerHTML = `
+                    <div class="error">❌ Error: ${error.message}</div>
+                `;
+                log(`Login error: ${error.message}`, 'error');
+            }
+        }
+
+        async function uploadGithubRepo() {
+            if (!authToken) {
+                alert('Please login first');
+                return;
+            }
+
+            try {
+                const uploadData = {
+                    projectName: document.getElementById('projectName').value,
+                    projectDescription: document.getElementById('projectDescription').value,
+                    projectType: document.getElementById('projectType').value,
+                    uploadMethod: 'github',
+                    githubRepo: document.getElementById('githubRepo').value,
+                    deploymentUrl: document.getElementById('deploymentUrl').value || undefined
+                };
+
+                log(`Uploading with data: ${JSON.stringify(uploadData, null, 2)}`);
+                log(`Using token: ${authToken.substring(0, 20)}...`);
+                
+                const response = await fetch(`${API_URL}/upload`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify(uploadData)
+                });
+
+                const data = await response.json();
+                log(`Upload response: ${JSON.stringify(data, null, 2)}`, response.ok ? 'success' : 'error');
+                
+                if (data.success) {
+                    document.getElementById('uploadStatus').innerHTML = `
+                        <div class="success">
+                            ✅ Upload successful!<br>
+                            Project ID: ${data.data.project.id}<br>
+                            Status: ${data.data.project.status}
+                        </div>
+                    `;
+                } else {
+                    document.getElementById('uploadStatus').innerHTML = `
+                        <div class="error">❌ Upload failed: ${data.message}</div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('uploadStatus').innerHTML = `
+                    <div class="error">❌ Error: ${error.message}</div>
+                `;
+                log(`Upload error: ${error.message}`, 'error');
+            }
+        }
+
+        async function getProjects() {
+            if (!authToken) {
+                alert('Please login first');
+                return;
+            }
+
+            try {
+                log('Fetching projects...');
+                
+                const response = await fetch(`${API_URL}/projects`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+
+                const data = await response.json();
+                log(`Projects response: ${JSON.stringify(data, null, 2)}`, response.ok ? 'success' : 'error');
+                
+                if (data.success) {
+                    const projectsList = document.getElementById('projectsList');
+                    if (data.projects.length === 0) {
+                        projectsList.innerHTML = '<div class="info">No projects found</div>';
+                    } else {
+                        projectsList.innerHTML = `
+                            <div class="success">
+                                Found ${data.projects.length} project(s):
+                                <ul>
+                                    ${data.projects.map(p => `
+                                        <li>
+                                            <strong>${p.name}</strong> (${p.type})<br>
+                                            ID: ${p.id}<br>
+                                            Status: ${p.status}<br>
+                                            Language: ${p.language}<br>
+                                            ${p.codebase_url ? `GitHub: ${p.codebase_url}<br>` : ''}
+                                            Created: ${new Date(p.created_at).toLocaleString()}
+                                        </li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                        `;
+                    }
+                } else {
+                    document.getElementById('projectsList').innerHTML = `
+                        <div class="error">❌ Failed to fetch projects: ${data.message}</div>
+                    `;
+                }
+            } catch (error) {
+                document.getElementById('projectsList').innerHTML = `
+                    <div class="error">❌ Error: ${error.message}</div>
+                `;
+                log(`Fetch projects error: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-login on page load for convenience
+        window.addEventListener('load', () => {
+            log('Page loaded. Ready for testing.', 'success');
+            log('API URL: ' + API_URL);
+            // Uncomment to auto-login:
+            // setTimeout(login, 500);
+        });
+    </script>
+</body>
+</html>

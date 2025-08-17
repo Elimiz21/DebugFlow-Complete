@@ -27,24 +27,48 @@ export class SocketServer {
       transports: ['websocket', 'polling']
     });
 
-    // Authentication middleware
+    // Authentication middleware - allow connection but limit features for unauthenticated users
     this.io.use(async (socket, next) => {
       try {
         const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.replace('Bearer ', '');
         
         if (!token) {
-          return next(new Error('Authentication token required'));
+          // Allow connection without auth but mark as guest
+          socket.user = {
+            id: 'guest-' + uuidv4(),
+            email: 'guest@debugflow.com',
+            name: 'Guest User',
+            isGuest: true
+          };
+          console.log('Guest connection allowed:', socket.user.id);
+          return next();
         }
 
         const user = AuthUtils.verifyToken(token);
         if (!user) {
-          return next(new Error('Invalid authentication token'));
+          // Allow as guest if token is invalid
+          socket.user = {
+            id: 'guest-' + uuidv4(),
+            email: 'guest@debugflow.com',
+            name: 'Guest User',
+            isGuest: true
+          };
+          console.log('Invalid token, allowing as guest:', socket.user.id);
+          return next();
         }
 
         // Get fresh user data from database
         const userData = await database.getUserById(user.id);
         if (!userData) {
-          return next(new Error('User not found'));
+          // User not found, treat as guest
+          socket.user = {
+            id: 'guest-' + uuidv4(),
+            email: 'guest@debugflow.com',
+            name: 'Guest User',
+            isGuest: true
+          };
+          console.log('User not found, allowing as guest:', socket.user.id);
+          return next();
         }
 
         socket.user = {

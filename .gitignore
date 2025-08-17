@@ -30,3 +30,4 @@ data/
 
 # Devcontainer
 .devcontainer/workspace
+debugflow.db
