@@ -49,8 +49,14 @@ class Database {
         await this.runMigrations();
         resolve();
       } catch (err) {
-        console.error('Error creating tables:', err.message);
-        reject(err);
+        // If the error is about duplicate columns, it's safe to continue
+        if (err.message && err.message.includes('duplicate column')) {
+          console.log('Database already has required columns, continuing...');
+          resolve();
+        } else {
+          console.error('Error creating tables:', err.message);
+          reject(err);
+        }
       }
     });
   }
@@ -86,8 +92,17 @@ class Database {
             }
           }
 
-          await this.execPromise(migration);
-          console.log(`Applied migration: ${file}`);
+          try {
+            await this.execPromise(migration);
+            console.log(`Applied migration: ${file}`);
+          } catch (migrationErr) {
+            // Ignore "duplicate column" errors as they mean the column already exists
+            if (migrationErr.message && migrationErr.message.includes('duplicate column')) {
+              console.log(`Migration ${file} - column already exists, skipping`);
+            } else {
+              throw migrationErr;
+            }
+          }
         }
       }
     } catch (error) {

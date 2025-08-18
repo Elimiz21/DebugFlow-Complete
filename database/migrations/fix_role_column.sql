@@ -1,6 +1,10 @@
 -- Add missing role column to users table
 -- This migration fixes the database schema to include the role column needed by admin panel
 
+-- Only add role column if it doesn't exist
+-- SQLite doesn't support IF NOT EXISTS for ALTER TABLE, so we'll handle this in the migration code
+
+-- These statements may fail if columns already exist, which is acceptable
 ALTER TABLE users ADD COLUMN role TEXT DEFAULT 'user';
 ALTER TABLE users ADD COLUMN organization_id INTEGER DEFAULT NULL;
 
