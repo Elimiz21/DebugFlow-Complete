@@ -337,21 +337,83 @@ async function handleUrlImport(req, res, user, data) {
       language: 'JSON'
     });
     
-    // In serverless, we can't do background processing, so mark as ready
-    // In a real implementation, you would trigger a separate serverless function or use a queue
+    // In serverless, process synchronously
     if (process.env.VERCEL) {
-      // Immediately mark as ready for demo purposes
-      setTimeout(async () => {
-        try {
-          await db.updateProject(projectId, {
-            status: 'ready',
-            file_count: 1,
-            language: uploadMethod === 'github' ? 'Repository' : 'Web App'
-          });
-        } catch (err) {
-          console.error('Failed to update project status:', err);
+      try {
+        let fetchedData = null;
+        let fileCount = 0;
+        let totalSize = 0;
+        let detectedLanguage = 'Unknown';
+        
+        if (uploadMethod === 'github') {
+          // Fetch GitHub repository files synchronously
+          const repoInfo = githubFetcher.parseGitHubUrl(githubRepo);
+          const files = await githubFetcher.fetchRepository(githubRepo);
+          
+          if (files && files.length > 0) {
+            // Store fetched files
+            for (const file of files.slice(0, 100)) { // Limit to 100 files for demo
+              if (file.content && file.path) {
+                await db.createProjectFile({
+                  project_id: projectId,
+                  filename: file.path.split('/').pop(),
+                  filepath: file.path,
+                  content: file.content,
+                  size_bytes: file.size || 0,
+                  language: file.language || 'Unknown'
+                });
+                fileCount++;
+                totalSize += file.size || 0;
+                if (file.language && detectedLanguage === 'Unknown') {
+                  detectedLanguage = file.language;
+                }
+              }
+            }
+          }
+          
+          fetchedData = {
+            repository: `${repoInfo.owner}/${repoInfo.repo}`,
+            filesAnalyzed: fileCount,
+            branch: 'main'
+          };
+        } else if (uploadMethod === 'url') {
+          // Fetch URL content synchronously
+          const urlContent = await urlFetcher.fetchUrl(appUrl);
+          
+          if (urlContent) {
+            await db.createProjectFile({
+              project_id: projectId,
+              filename: 'index.html',
+              filepath: '/',
+              content: urlContent.html || urlContent.content,
+              size_bytes: urlContent.size || 0,
+              language: 'HTML'
+            });
+            fileCount = 1;
+            totalSize = urlContent.size || 0;
+            detectedLanguage = 'HTML';
+            
+            fetchedData = {
+              url: appUrl,
+              title: urlContent.title,
+              contentType: urlContent.contentType
+            };
+          }
         }
-      }, 100);
+        
+        // Update project status
+        await db.updateProject(projectId, {
+          status: 'completed',
+          file_count: fileCount,
+          size_bytes: totalSize,
+          language: detectedLanguage
+        });
+      } catch (err) {
+        console.error('Failed to process import:', err);
+        await db.updateProject(projectId, {
+          status: 'failed'
+        });
+      }
     } else {
       // Start background import process (fire and forget)
       setImmediate(() => {
