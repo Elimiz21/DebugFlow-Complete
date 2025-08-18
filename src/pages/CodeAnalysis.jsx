@@ -20,6 +20,9 @@ const CodeAnalysis = ({ user }) => {
   const [activeTab, setActiveTab] = useState('code-analysis');
   const [semanticAnalysis, setSemanticAnalysis] = useState(null);
   const [bugPrediction, setBugPrediction] = useState(null);
+  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [projectFiles, setProjectFiles] = useState([]);
+  const [loadingProject, setLoadingProject] = useState(false);
 
   useEffect(() => {
     // Load available analysis types
@@ -39,9 +42,62 @@ const CodeAnalysis = ({ user }) => {
     }
   }, []);
 
+  // Load project files when a project is selected
+  const loadProjectFiles = async (projectId) => {
+    if (!projectId) {
+      setProjectFiles([]);
+      setCode('');
+      return;
+    }
+
+    setLoadingProject(true);
+    try {
+      const token = localStorage.getItem('debugflow_token');
+      const response = await fetch(`/api/projects/${projectId}/files`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setProjectFiles(data.files || []);
+        
+        // Load first file content if available
+        if (data.files && data.files.length > 0) {
+          const firstFile = data.files[0];
+          setCode(firstFile.content || '');
+          setSelectedFile(firstFile.filename || 'file.js');
+        }
+        
+        toast.success(`Loaded ${data.files?.length || 0} files from project`);
+      } else {
+        toast.error('Failed to load project files');
+      }
+    } catch (error) {
+      console.error('Error loading project files:', error);
+      toast.error('Error loading project files');
+    } finally {
+      setLoadingProject(false);
+    }
+  };
+
+  // Handle project selection
+  const handleProjectSelect = (e) => {
+    const projectId = e.target.value;
+    setSelectedProjectId(projectId);
+    if (projectId) {
+      loadProjectFiles(projectId);
+    } else {
+      setProjectFiles([]);
+      setCode('');
+      setSelectedFile(null);
+    }
+  };
+
   const analyzeCode = async () => {
-    if (!code.trim()) {
-      toast.error('Please enter some code to analyze');
+    if (!code.trim() && !selectedProjectId) {
+      toast.error('Please select a project or enter some code to analyze');
       return;
     }
 
@@ -64,7 +120,11 @@ const CodeAnalysis = ({ user }) => {
       };
 
       // Create project data structure
-      const projectData = {
+      const projectData = selectedProjectId && projectFiles.length > 0 ? {
+        id: selectedProjectId,
+        name: projects?.find(p => p.id === selectedProjectId)?.name || 'Selected Project',
+        files: projectFiles
+      } : {
         id: 'code-analysis-' + Date.now(),
         name: 'Code Analysis Session',
         files: [{
@@ -365,6 +425,54 @@ const CodeAnalysis = ({ user }) => {
             </div>
           </div>
 
+                {/* Project Selector */}
+                <div className="bg-gray-50 rounded-lg p-6 mb-6">
+                  <div className="flex items-center mb-4">
+                    <Layers className="h-5 w-5 text-green-600 mr-2" />
+                    <h2 className="text-lg font-semibold">Select Project</h2>
+                  </div>
+                  
+                  <select
+                    value={selectedProjectId}
+                    onChange={handleProjectSelect}
+                    disabled={loadingProject}
+                    className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">-- Select a project or paste code below --</option>
+                    {projects && projects.map(project => (
+                      <option key={project.id} value={project.id}>
+                        {project.name} ({project.file_count || 0} files, {project.language || 'Unknown'})
+                      </option>
+                    ))}
+                  </select>
+                  
+                  {selectedProjectId && projectFiles.length > 0 && (
+                    <div className="mt-3 text-sm text-gray-600">
+                      <p>Project loaded: {projectFiles.length} files available</p>
+                      {projectFiles.length > 0 && (
+                        <select
+                          value={selectedFile || ''}
+                          onChange={(e) => {
+                            const file = projectFiles.find(f => f.filename === e.target.value);
+                            if (file) {
+                              setSelectedFile(file.filename);
+                              setCode(file.content || '');
+                            }
+                          }}
+                          className="mt-2 w-full p-2 border border-gray-300 rounded-md text-sm"
+                        >
+                          <option value="">-- Select a file --</option>
+                          {projectFiles.map((file, idx) => (
+                            <option key={idx} value={file.filename}>
+                              {file.filename} ({file.language || 'Unknown'})
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 {/* Code Input */}
                 <div className="bg-gray-50 rounded-lg p-6">
             <div className="flex items-center justify-between mb-4">
@@ -384,13 +492,14 @@ const CodeAnalysis = ({ user }) => {
                 onChange={(e) => setSelectedFile(e.target.value)}
                 placeholder="Optional: Enter filename (e.g., app.js, component.jsx)"
                 className="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500"
+                disabled={selectedProjectId && projectFiles.length > 0}
               />
             </div>
             
             <textarea
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="Paste your code here for AI analysis..."
+              placeholder={selectedProjectId ? "Code loaded from selected project/file" : "Paste your code here for AI analysis..."}
               className="w-full h-64 p-3 border border-gray-300 rounded-md font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
             
